@@ -27,12 +27,12 @@ Utilizei o **DevTools (F12)** no e-commerce da Amazon, focando na aba **Network 
 
 1. Filtrei o tráfego por **JS** (JavaScript) e observei a "cachoeira" de scripts de terceiros sendo carregados apenas para montar a página inicial.
 
-![Inspecionando os arquivos JavaScript](Dia01_tracking_martech.jpg)
+![Inspecionando os arquivos JavaScript](Dia01_tracking_martech.png)
 
 2. Limpei o console e alterei o filtro para **Fetch/XHR** para monitorar a comunicação silenciosa de dados.
 3. **A captura:** Ao interagir com o site e clicar em um produto (Havaianas), interceptei em tempo real as requisições disparando na aba Rede.
 
-![Capturando os eventos XHR/Fetch em tempo real](Dia01_tracking_martech02.jpg)
+![Capturando os eventos XHR/Fetch em tempo real](Dia01_tracking_martech02.png)
 
 Essas requisições `fetch/xhr` são o coração do Martech: pacotes de dados saindo do meu navegador avisando os servidores da Amazon sobre a minha interação exata.
 
