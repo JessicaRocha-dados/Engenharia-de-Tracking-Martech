@@ -92,4 +92,4 @@ Abaixo está o mapeamento técnico dos eventos que serão implementados na camad
 
 Abaixo está a representação visual da esteira de dados, detalhando como os parâmetros de nível superior e os arrays de produtos interagem em cada disparo para o GA4.
 
-![Fluxograma de Arquitetura do E-commerce](./arquitetura_ecommerce_ga4.png)
+![Fluxograma de Arquitetura do E-commerce](./fluxograma_ecommerce.png)
