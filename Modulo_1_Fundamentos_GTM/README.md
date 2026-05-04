@@ -57,19 +57,21 @@ Para criar uma arquitetura de dados eficiente, partimos de perguntas reais que p
 
 *   **Validação de Intenção:** "Muitas pessoas clicam no botão de comprar, mas o item realmente entra no carrinho com sucesso?"
 *   **Análise de Atrito:** "O usuário desiste da compra na reta final por causa do preço do produto ou pelo valor do frete?"
-*   **Métricas de Performance:** "Como garantir que a receita e o ROI das campanhas no banco de dados reflitam o faturamento real, sem vendas duplicadas?"
+*   **Métricas de Performance:** "Como garantir que a receita e o ROI das campanhas reflitam o faturamento real, sem vendas duplicadas?"
 
 ---
 
-## 🧠 2. O Framework de Solução
+## 🧠 2. O Framework de Solução (Metodologia)
 
-Aplicamos o framework de **Solution Design Reference (SDR)**, focado em Marketing Performance:
+Antes de desenhar qualquer fluxo técnico, aplicamos um framework de 5 etapas para garantir que a mensuração esteja alinhada aos objetivos estratégicos de Marketing Performance.
 
-1.  **Discovery:** Entendimento das métricas de sucesso e perguntas de negócio.
-2.  **Jornada do Usuário:** Mapeamento do caminho no site (Vitrine ➔ Carrinho ➔ Checkout ➔ Compra Confirmada).
-3.  **O Verbo (Eventos GA4):** Tradução dos gatilhos para a nomenclatura padrão do Google Analytics 4.
-4.  **O Payload (Contexto):** Definição dos parâmetros globais e da matriz de itens (`array`) necessários para dar contexto à ação.
-5.  **O Entregável:** A consolidação do Dicionário de Dados e do Fluxograma visual.
+![Metodologia de Planejamento Estratégico](./passo_a_passo_estrategico.png)
+
+1.  **Discovery (A Origem):** Identificação da pergunta de negócio fundamental.
+2.  **Jornada do Usuário (O Caminho):** Mapeamento visual das interações, telas e botões que o usuário percorre até a conversão.
+3.  **O Verbo (A Ação no GA4):** Tradução das ações para a nomenclatura padrão do Google Analytics 4 (ex: `view_item`, `add_to_cart`).
+4.  **O Payload (O Contexto):** Definição técnica dos parâmetros globais e matriz de itens (`array`) necessários (ex: `price`, `quantity`).
+5.  **O Entregável (A Formalização):** Consolidação estratégica em um dicionário de dados (SDR) e fluxograma visual.
 
 ---
 
@@ -80,16 +82,16 @@ Abaixo está o mapeamento técnico dos eventos que serão implementados na camad
 | Etapa do Funil | Evento (Verbo) | Parâmetros Globais | Parâmetros do Array (`items`) | Objetivo de Negócio |
 | :--- | :--- | :--- | :--- | :--- |
 | **Vitrine** | `view_item` | `currency`, `value` | `item_id`, `item_name`, `price` | Medir o interesse inicial em produtos específicos. |
-| **Carrinho** | `add_to_cart` | `currency`, `value` | *Mesmos do passo anterior* + `quantity` | Identificar taxa de adição ao carrinho e volume. |
+| **Carrinho** | `add_to_cart` | `currency`, `value` | *Mesmos do anterior* + `quantity` | Identificar taxa de adição ao carrinho e volume. |
 | **Checkout** | `begin_checkout` | `currency`, `value` | *Mesmos do passo anterior* | Medir abandono na tela de pagamento. |
-| **Fechamento** | `purchase` | `transaction_id`, `currency`, `value` | *Mesmos do passo anterior* | Validar faturamento real e calcular ROI das campanhas. |
+| **Fechamento** | `purchase` | `transaction_id`, `currency`, `value` | *Mesmos do passo anterior* | Validar faturamento real e calcular ROI. |
 
-> **Nota Técnica:** O disparo do evento `add_to_cart` foi definido para ocorrer **apenas na confirmação de sucesso** do sistema, garantindo a integridade dos dados e evitando o registro de falsos positivos no fluxo de conversão.
+> **Nota Técnica:** O disparo do evento `add_to_cart` ocorre apenas na confirmação de sucesso do sistema, evitando falsos positivos no funil.
 
 ---
 
 ## 🗺️ 4. Fluxograma Arquitetural
 
-Abaixo está a representação visual da esteira de dados, detalhando como os parâmetros de nível superior e os arrays de produtos interagem em cada disparo para o GA4.
+Representação visual da esteira de dados e interação dos parâmetros em cada disparo para o GA4.
 
 ![Fluxograma de Arquitetura do E-commerce](./fluxograma_ecommerce.png)
