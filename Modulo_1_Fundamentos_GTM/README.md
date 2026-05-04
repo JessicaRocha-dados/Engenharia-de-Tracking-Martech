@@ -44,3 +44,52 @@ Essas requisições `fetch/xhr` são o coração do Martech: pacotes de dados sa
 ---
 **Autora:** Jéssica Rocha  
 *Estudante de Ciência de Dados & Engenharia de Analytics*
+
+# 📊 Dia 02: Arquitetura de Dados e Mensuração de E-commerce (GA4)
+
+Neste segundo dia de documentação, o foco foi sair da execução operacional e entrar na mentalidade de **Engenharia de Analytics**. Antes de configurar o Google Tag Manager, desenvolvemos o planejamento arquitetural estruturando o fluxo de dados de um e-commerce para garantir a precisão da coleta.
+
+---
+
+## 🎯 1. O Problema de Negócio (Discovery)
+
+Para criar uma arquitetura de dados eficiente, partimos de perguntas reais que precisam ser respondidas para otimizar o ROI e a conversão:
+
+*   **Validação de Intenção:** "Muitas pessoas clicam no botão de comprar, mas o item realmente entra no carrinho com sucesso?"
+*   **Análise de Atrito:** "O usuário desiste da compra na reta final por causa do preço do produto ou pelo valor do frete?"
+*   **Métricas de Performance:** "Como garantir que a receita e o ROI das campanhas no banco de dados reflitam o faturamento real, sem vendas duplicadas?"
+
+---
+
+## 🧠 2. O Framework de Solução
+
+Aplicamos o framework de **Solution Design Reference (SDR)**, focado em Marketing Performance:
+
+1.  **Discovery:** Entendimento das métricas de sucesso e perguntas de negócio.
+2.  **Jornada do Usuário:** Mapeamento do caminho no site (Vitrine ➔ Carrinho ➔ Checkout ➔ Compra Confirmada).
+3.  **O Verbo (Eventos GA4):** Tradução dos gatilhos para a nomenclatura padrão do Google Analytics 4.
+4.  **O Payload (Contexto):** Definição dos parâmetros globais e da matriz de itens (`array`) necessários para dar contexto à ação.
+5.  **O Entregável:** A consolidação do Dicionário de Dados e do Fluxograma visual.
+
+---
+
+## 📑 3. Dicionário de Dados (SDR)
+
+Abaixo está o mapeamento técnico dos eventos que serão implementados na camada de dados (DataLayer). O parâmetro `items` deve acompanhar o usuário em toda a jornada para manter a integridade do funil.
+
+| Etapa do Funil | Evento (Verbo) | Parâmetros Globais | Parâmetros do Array (`items`) | Objetivo de Negócio |
+| :--- | :--- | :--- | :--- | :--- |
+| **Vitrine** | `view_item` | `currency`, `value` | `item_id`, `item_name`, `price` | Medir o interesse inicial em produtos específicos. |
+| **Carrinho** | `add_to_cart` | `currency`, `value` | *Mesmos do passo anterior* + `quantity` | Identificar taxa de adição ao carrinho e volume. |
+| **Checkout** | `begin_checkout` | `currency`, `value` | *Mesmos do passo anterior* | Medir abandono na tela de pagamento. |
+| **Fechamento** | `purchase` | `transaction_id`, `currency`, `value` | *Mesmos do passo anterior* | Validar faturamento real e calcular ROI das campanhas. |
+
+> **Nota Técnica:** O disparo do evento `add_to_cart` foi definido para ocorrer **apenas na confirmação de sucesso** do sistema, garantindo a integridade dos dados e evitando o registro de falsos positivos no fluxo de conversão.
+
+---
+
+## 🗺️ 4. Fluxograma Arquitetural
+
+Abaixo está a representação visual da esteira de dados, detalhando como os parâmetros de nível superior e os arrays de produtos interagem em cada disparo para o GA4.
+
+![Fluxograma de Arquitetura do E-commerce](./arquitetura_ecommerce_ga4.png)
