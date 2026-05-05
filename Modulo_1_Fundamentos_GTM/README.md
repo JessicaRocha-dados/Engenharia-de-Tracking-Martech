@@ -95,3 +95,64 @@ Abaixo está o mapeamento técnico dos eventos que serão implementados na camad
 Representação visual da esteira de dados e interação dos parâmetros em cada disparo para o GA4.
 
 ![Fluxograma de Arquitetura do E-commerce](./fluxograma_ecommerce.png)
+
+---
+
+## 🏗️ Dia 03: Estrutura, Hierarquia e Instalação Prática do GTM
+
+### 🎯 Objetivo do Dia
+Sair da teoria e realizar a instalação física do **Google Tag Manager (GTM)** em um ambiente real. Compreender a hierarquia organizacional da ferramenta (Conta vs. Contêiner) e validar o "encanamento" de dados através de um deploy utilizando o **GitHub Pages**.
+
+---
+
+### 🛠️ O Que Foi Feito (Laboratório Prático)
+
+#### 1. Arquitetura e Governança no GTM
+O primeiro passo foi criar a infraestrutura básica. Entendi que a **Conta** representa a empresa ou organização principal, enquanto o **Contêiner** representa o ativo digital específico (neste caso, focado em Web).
+> **Evidência (Criação do Ambiente):**  
+> ![Configuração de Conta e Contêiner](Exercicio%201.png)
+
+#### 2. Anatomia dos Scripts (Head e Body)
+O GTM não é apenas um script, mas um sistema composto por duas partes vitais. O painel forneceu os códigos necessários e a instrução exata de onde posicioná-los para garantir a máxima eficiência na coleta.
+> **Evidência (Snippets Gerados):**  
+> ![Snippets do GTM](Exercicio%202.png)
+
+A aplicação seguiu a regra técnica:
+*   **Script do `<head>`:** Inserido no topo para garantir o carregamento prioritário e não perder eventos iniciais da página.
+*   **Script do `<body>`:** Inserido logo após a abertura da tag como um *fallback* (noscript) para ambientes sem JavaScript.
+> **Evidência (Código Implementado):**  
+> ![Scripts GTM no Código HTML](Exercicio%203.png)  
+> ![Scripts no GitHub](Exercicio%204.png)
+
+#### 3. Hospedagem e Deploy (GitHub Pages)
+Não me limitei a um simulador local. Criei um repositório dedicado, subi o arquivo estático e utilizei o **GitHub Pages** para colocar o ambiente de testes em produção real com protocolo HTTPS.
+> **Evidências (Ambiente de Deploy):**  
+> ![Configuração GitHub Pages](Exercicio%205.png)  
+> ![Site de Testes Publicado](Exercicio%205.1.png)
+
+#### 4. Validação Técnica com Tag Assistant
+De nada adianta instalar se não houver validação. Utilizei o modo de depuração (Preview Mode) do GTM para testar a comunicação entre o servidor do Google e o meu novo site.
+> **Evidência (Conexão do Debug):**  
+> ![Mapeamento de URL no Debug](Exercicio%206%20(2).png)
+
+#### 5. Resultado Final: Sucesso na Conexão
+O teste retornou o selo verde de **"Connected"**. Isso atesta que a base da arquitetura de tracking está operante e pronta para receber as futuras tags de métricas e conversões.
+> **Evidência (Status Conectado):**  
+> ![Tag Assistant Conectado](Exercicio%206.1.png)
+
+---
+
+### 💡 Insight de Engenharia de Analytics
+> "A instalação do GTM é o alicerce de qualquer projeto de dados em Marketing. Uma tag mal posicionada no código não é um erro de sintaxe, é a perda de dados cruciais (como a origem de uma campanha) em um mundo onde a velocidade de carregamento define a permanência do usuário."
+
+**Metodologia Aplicada:** *Logic-First*. Antes de manipular qualquer arquivo no GitHub, documentei mentalmente e no papel a hierarquia das tags. Isso garantiu que os IDs sensíveis fossem tratados com as devidas políticas de segurança de dados em um repositório público.
+
+---
+
+### ✅ Checklist de Conclusão
+* [x] Conta e Contêiner Web criados no GTM.
+* [x] Compreensão da distinção entre os scripts de `<head>` e `<body>`.
+* [x] Código HTML criado e injetado com os snippets corretamente.
+* [x] Deploy realizado com sucesso no domínio do GitHub Pages.
+* [x] Ambiente de debug (Tag Assistant) conectado e validado.
+* [x] Documentação higienizada mantendo a governança de dados.
