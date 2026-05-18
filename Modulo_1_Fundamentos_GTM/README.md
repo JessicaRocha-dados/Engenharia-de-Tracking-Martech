@@ -156,3 +156,41 @@ O teste retornou o selo verde de **"Connected"**. Isso atesta que a base da arqu
 * [x] Deploy realizado com sucesso no domínio do GitHub Pages.
 * [x] Ambiente de debug (Tag Assistant) conectado e validado.
 * [x] Documentação higienizada mantendo a governança de dados.
+
+---
+
+## 🚀 Dia 04: A Primeira Tag (GA4)
+
+**Módulo:** 1 (Fundamentos da Coleta)  
+**Status:** Concluído ✅
+
+### 🎯 Objetivo do Dia
+Estabelecer a conexão fundamental entre o site de testes (GitHub Pages) e o Google Analytics 4 (GA4) utilizando o Google Tag Manager (GTM). O foco foi garantir a coleta da métrica base (`page_view`) e validar rigorosamente o fluxo de dados tanto no front-end quanto no back-end.
+
+### 📘 Teoria Aplicada
+A arquitetura de dados do GA4 via GTM exige uma fundação antes de qualquer evento personalizado. 
+* **Tag do Google (Configuração):** Carrega a biblioteca global `gtag.js` e dispara eventos automáticos de medição otimizada. É o "abre-alas" do rastreamento.
+* **Validação em Duas Etapas (QA):** Nunca assumimos que um dado chegou apenas porque a tag disparou. A validação ocorre em duas frentes:
+  1. **Front-end (GTM Preview):** Confirma se a regra de acionamento (Trigger) funcionou na página.
+  2. **Back-end (GA4 DebugView):** Confirma se os servidores do Google receberam e processaram o payload.
+
+---
+
+### 🛠️ Laboratório Prático
+
+#### Exercício 1: Configuração da Tag Base no GTM
+Criação da Tag do Google vinculada ao ID de Medida da propriedade de testes, acionada no evento `Initialization - All Pages` para garantir o carregamento prioritário.
+
+![Configuração da Tag Base](Dia04_configuração_tag.png)
+
+#### Exercício 2: Validação de Disparo (Front-end)
+Teste realizado via Google Tag Assistant (Preview Mode) comprovando que a Tag foi injetada corretamente no código do site e disparou na inicialização do contêiner.
+
+![Validação Tag Assistant](Dia04_configuração_tag_Exercicio2.png)
+
+#### Exercício 3: Validação de Recebimento (Back-end)
+Monitoramento em tempo real via **DebugView** do GA4. O teste comprova a chegada do evento `page_view` (junto com engajamento e sessão), confirmando que a ponte de dados está 100% funcional.
+
+![Validação DebugView GA4](Dia04_debugview.png)
+
+---
