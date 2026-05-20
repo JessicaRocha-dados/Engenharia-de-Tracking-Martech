@@ -194,3 +194,36 @@ Monitoramento em tempo real via **DebugView** do GA4. O teste comprova a chegada
 ![Validação DebugView GA4](Dia04_debugview.png)
 
 ---
+
+## 🚦 Dia 05: Acionadores Básicos e Ciclo da Página
+
+**Módulo:** 1 (Fundamentos da Coleta)  
+**Status:** Concluído ✅
+
+### 🎯 Objetivo do Dia
+Dominar o "quando" disparar uma tag, entendendo o ciclo de vida de carregamento de uma página no navegador e criando filtros baseados em Variáveis de URL.
+
+### 📘 Teoria Aplicada
+Para garantir dados limpos, não podemos disparar tudo ao mesmo tempo. Compreender a cronologia de renderização é vital:
+* **Initialization:** Usado para a base do GA4 (feito no Dia 04).
+* **Container Loaded (Page View):** O navegador começa a ler a estrutura. É onde verificamos se a URL atende a algum requisito específico.
+* **DOM Ready / Window Loaded:** Estágios posteriores para quando precisarmos interagir com botões ou aguardar recursos pesados.
+
+### 🛠️ Laboratório Prático e Evidências
+
+O desafio foi criar uma Tag de Evento Personalizado (`view_sobre`) que só dispara quando o usuário entra na rota específica da página.
+
+**1. Criação do Acionador Filtrado:**
+Configuração de um Trigger do tipo *Page View*, condicionado a disparar apenas quando a Variável Incorporada `{{Page URL}}` contiver a palavra `sobre`.
+
+![Acionador Página Sobre](Dia05_acionadores.png)
+
+**2. Configuração da Tag de Evento:**
+Criação do evento personalizado linkado diretamente ao acionador criado.
+
+![Tag de Evento](Dia05_config_tag_evento.png)
+
+**3. QA de Front-end (Tag Assistant):**
+Utilização do recurso de *Query Parameters* (`?teste=sobre`) na URL para simular a rota no ambiente do GitHub Pages. A validação comprova a leitura correta da variável e o disparo exclusivo da Tag de Evento no momento em que o Contêiner é carregado.
+
+![Validação Tag Fired](Dia05_tag_disparada.png)
