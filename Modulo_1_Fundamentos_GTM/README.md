@@ -227,3 +227,33 @@ Criação do evento personalizado linkado diretamente ao acionador criado.
 Utilização do recurso de *Query Parameters* (`?teste=sobre`) na URL para simular a rota no ambiente do GitHub Pages. A validação comprova a leitura correta da variável e o disparo exclusivo da Tag de Evento no momento em que o Contêiner é carregado.
 
 ![Validação Tag Fired](Dia05_tag_disparada.png)
+
+---
+## 🧩 Dia 06: Variáveis Nativas e o Pilar da Governança de Dados
+
+**Módulo:** 1 (Fundamentos da Coleta)  
+**Status:** Concluído ✅
+
+### 🎯 Objetivo do Dia
+Compreender como o GTM extrai contexto dinâmico das interações do usuário e, mais importante, aplicar as melhores práticas de **Governança de Dados** na arquitetura de rastreamento.
+
+### 📘 Teoria Aplicada
+* **Variáveis Nativas (Built-in):** Sensores pré-programados do GTM para ler atributos nativos do HTML e do navegador (ex: links de destino, classes CSS de botões e textos clicados).
+* **Single Source of Truth (Fonte Única da Verdade):** Princípio de governança onde um dado crítico de negócio (como IDs de ferramentas) é armazenado num único local centralizado, garantindo escalabilidade e prevenção de erros em manutenções futuras.
+
+### 🛠️ Laboratório Prático e Evidências
+
+O desafio consistiu em duas missões: ativar o rastreamento profundo de interações de front-end ("Click Listener") e refatorar a tag base para seguir padrões de Governança e escalabilidade.
+
+**1. Ativação de Sensores e Gatilho:**
+* Ativação das variáveis Built-in de Clique (`Click Classes`, `Click ID`, `Click URL`, `Click Text`).
+* Criação de um Acionador genérico de Cliques (All Elements) para injetar o *Listener* no código fonte.
+
+**2. 🛡️ Governança de Dados e Refatoração:**
+* Criação de uma Variável Definida pelo Usuário do tipo "Permanente" (Constante) para blindar o ID da Métrica do GA4 (`G-E8JYQ3ZYX6`).
+* Refatoração das tags existentes: substituição de dados *hardcoded* (digitados manualmente) pela chamada dinâmica da variável `{{Permanente - ID do GA4}}`. Isso garante que futuras manutenções sejam feitas num único nó da arquitetura.
+
+**3. QA de Front-end (Tag Assistant):**
+Validação do evento assíncrono `gtm.click`. A auditoria na aba "Variables" comprova a captura do contexto do clique e a injeção perfeita da variável constante de Governança no momento do disparo.
+
+![Validação de Variáveis, Clique e Governança](Dia06_variaveis_qa.png)
