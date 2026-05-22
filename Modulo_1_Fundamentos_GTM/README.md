@@ -280,15 +280,20 @@ O laboratório simulou um cenário real onde o botão alvo no front-end não pos
 * Mapeamento do elemento interativo utilizando o atributo visual `Click Text` ("Clique aqui para testar um Evento").
 * Configuração inicial e validação positiva da Tag de Evento GA4 (`click_botao_teste`), garantindo a ocultação de IDs da infraestrutura (GTM/GA4) nas evidências de QA.
 
-![Visão do Botão Alvo no Front-end](Dia07_01_botao_alvo_2.png)
+![Visão do Botão Alvo no Front-end](Dia07_01_botao_alvo.png)
 <br>
-![QA Inicial - Tag Disparada via Click Text](Dia07_02_qa_click_text_3.png)
+![QA Inicial - Tag Disparada via Click Text](Dia07_02_qa_click_text.png)
 
 **2. 🛡️ Engenharia Reversa e Refatoração (A Busca pela Robustez):**
 * Durante a auditoria do dataLayer, foi identificado que o botão possuía um ID oculto (`btn-teste`).
 * **Refatoração:** O Acionador original foi editado para abandonar o rastreamento frágil por texto (`Click Text`) e adotar a regra condicional absoluta: `Click ID` é igual a `btn-teste`.
 
-![Refatoração do Acionador para Click ID](Dia07_03_refatoracao_acionador_2.png)
+![Refatoração do Acionador para Click ID](Dia07_03_refatoracao_acionador.png)
+
+**3. QA Final (Quality Assurance):**
+Validação positiva da nova arquitetura. A auditoria confirmou a captura perfeita do ID estrutural e o disparo seguro do evento no exato milissegundo da interação.
+
+![Validação da Captura do ID no Front-end](Dia07_04_qa_click_id.png)
 
 **3. QA Final (Quality Assurance):**
 Validação positiva da nova arquitetura. A auditoria confirmou a captura perfeita do ID estrutural e o disparo seguro do evento no exato milissegundo da interação.
