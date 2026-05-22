@@ -265,30 +265,32 @@ Validação do evento assíncrono `gtm.click`. A auditoria na aba "Variables" co
 **Status:** Concluído ✅
 
 ### 🎯 Objetivo do Dia
-Aprender a isolar interações de alto valor (Auto-Event Tracking), aplicar engenharia reversa para descobrir atributos ocultos no HTML e refatorar arquiteturas de rastreamento buscando o "Padrão Ouro" de segurança (uso de IDs em vez de Textos).
+Aprender a isolar interações de alto valor (Auto-Event Tracking), aplicar engenharia reversa para descobrir atributos ocultos no HTML e refatorar arquiteturas de rastreamento buscando o "Padrão Ouro" de segurança (uso de IDs em vez de Textos), aplicando rigorosas práticas de Governança e ofuscação de dados sensíveis.
 
 ### 📘 Teoria Aplicada
 * **Just Links vs. All Elements:** Entendimento de quando rastrear âncoras (`<a>`) com destino de URL (Just Links) e quando rastrear cliques genéricos na interface (botões, modais) diretamente no DOM (All Elements).
 * **Engenharia Reversa no Front-end:** Utilização do Tag Assistant para auditar eventos reais e descobrir quais atributos (Classes, Textos, IDs) estão disponíveis no elemento alvo.
-* **O "Padrão Ouro" do Tracking:** Por que rastrear eventos por `Click ID` é infinitamente mais robusto do que por `Click Text` (textos podem sofrer testes A/B ou alterações de copy, enquanto IDs são fixos e estruturais).
+* **O "Padrão Ouro" do Tracking:** Por que rastrear eventos por `Click ID` é infinitamente mais robusto do que por `Click Text` (textos podem sofrer testes A/B ou alterações de copy, enquanto IDs são fixos, únicos e estruturais).
 
 ### 🛠️ Laboratório Prático e Evidências
 
-O laboratório simulou um cenário real onde o botão alvo no front-end não possuía documentação prévia, exigindo investigação e adaptação.
+O laboratório simulou um cenário real onde o botão alvo no front-end não possuía documentação prévia, exigindo investigação, adaptação e posterior refatoração da arquitetura.
 
 **1. Diagnóstico Inicial e Tracking por Texto:**
 * Mapeamento do elemento interativo utilizando o atributo visual `Click Text` ("Clique aqui para testar um Evento").
-* Configuração inicial e validação positiva da Tag de Evento GA4 (`click_botao_teste`).
+* Configuração inicial e validação positiva da Tag de Evento GA4 (`click_botao_teste`), garantindo a ocultação de IDs da infraestrutura (GTM/GA4) nas evidências de QA.
 
-![Botão Alvo e QA Inicial](Dia07_02_qa_click_text.png)
+![Visão do Botão Alvo no Front-end](Dia07_01_botao_alvo_2.png)
+<br>
+![QA Inicial - Tag Disparada via Click Text](Dia07_02_qa_click_text_3.png)
 
 **2. 🛡️ Engenharia Reversa e Refatoração (A Busca pela Robustez):**
 * Durante a auditoria do dataLayer, foi identificado que o botão possuía um ID oculto (`btn-teste`).
 * **Refatoração:** O Acionador original foi editado para abandonar o rastreamento frágil por texto (`Click Text`) e adotar a regra condicional absoluta: `Click ID` é igual a `btn-teste`.
 
-![Refatoração do Acionador para Click ID](Dia07_03_refatoracao_acionador.png)
+![Refatoração do Acionador para Click ID](Dia07_03_refatoracao_acionador_2.png)
 
 **3. QA Final (Quality Assurance):**
 Validação positiva da nova arquitetura. A auditoria confirmou a captura perfeita do ID estrutural e o disparo seguro do evento no exato milissegundo da interação.
 
-![Validação da Captura do ID no Front-end](Dia07_04_qa_click_id.png)
+![Validação da Captura do ID no Front-end](Dia07_04_qa_click_id_2.png)
