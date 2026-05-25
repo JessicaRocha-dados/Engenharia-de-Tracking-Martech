@@ -295,7 +295,4 @@ Validação positiva da nova arquitetura. A auditoria confirmou a captura perfei
 
 ![Validação da Captura do ID no Front-end](Dia07_04_qa_click_id.png)
 
-**3. QA Final (Quality Assurance):**
-Validação positiva da nova arquitetura. A auditoria confirmou a captura perfeita do ID estrutural e o disparo seguro do evento no exato milissegundo da interação.
 
-![Validação da Captura do ID no Front-end](Dia07_04_qa_click_id.png)
