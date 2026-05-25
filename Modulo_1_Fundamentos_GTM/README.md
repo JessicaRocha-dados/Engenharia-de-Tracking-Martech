@@ -1,12 +1,12 @@
-# 🌐 Dia 01: O Ecossistema Web e a "Matrix" do Navegador
+#  Dia 01: O Ecossistema Web e a "Matrix" do Navegador
 
 **Módulo:** 1 (Os Fundamentos da Coleta)  
 **Status:** Concluído ✔️
 
-## 🎯 Objetivo do Dia
+##  Objetivo do Dia
 Entender a base da internet (a comunicação Client-Server) e aprender a utilizar a aba **Network (Rede)** do navegador para inspecionar os disparos reais de rastreamento, antes de abrir ferramentas como GTM ou GA4.
 
-## 🧠 Teoria Absorvida
+## Teoria Absorvida
 
 Para atuar com engenharia de rastreamento, é preciso entender que a web funciona através de um fluxo contínuo de **Requisições e Respostas**.
 * **O Navegador (Client):** Solicita as informações e interage com o usuário.
@@ -19,7 +19,7 @@ Para atuar com engenharia de rastreamento, é preciso entender que a web funcion
 
 ---
 
-## 💻 Prática: Inspecionando o Tráfego (O caso Amazon)
+##  Prática: Inspecionando o Tráfego (O caso Amazon)
 
 Utilizei o **DevTools (F12)** no e-commerce da Amazon, focando na aba **Network (Rede)** — a verdadeira mesa de cirurgia de quem trabalha com dados na web.
 
@@ -38,20 +38,20 @@ Essas requisições `fetch/xhr` são o coração do Martech: pacotes de dados sa
 
 ---
 
-## 💡 Insight Principal
+##  Insight Principal
 > *Garbage in, garbage out.* Se um bloqueador de anúncios (AdBlock) ou uma restrição de navegador (ITP da Apple) barrar essa requisição `fetch` na aba Network, o dado morre ali. Ele nunca chegará ao Google Analytics ou ao BigQuery. A **Engenharia de Dados aplicada ao Marketing** começa na trincheira do navegador, garantindo que a requisição web aconteça com sucesso.
 
 ---
 **Autora:** Jéssica Rocha  
 *Estudante de Ciência de Dados & Engenharia de Analytics*
 
-# 📊 Dia 02: Arquitetura de Dados e Mensuração de E-commerce (GA4)
+# Dia 02: Arquitetura de Dados e Mensuração de E-commerce (GA4)
 
 Neste segundo dia de documentação, o foco foi sair da execução operacional e entrar na mentalidade de **Engenharia de Analytics**. Antes de configurar o Google Tag Manager, desenvolvemos o planejamento arquitetural estruturando o fluxo de dados de um e-commerce para garantir a precisão da coleta.
 
 ---
 
-## 🎯 1. O Problema de Negócio (Discovery)
+## 1. O Problema de Negócio (Discovery)
 
 Para criar uma arquitetura de dados eficiente, partimos de perguntas reais que precisam ser respondidas para otimizar o ROI e a conversão:
 
@@ -61,7 +61,7 @@ Para criar uma arquitetura de dados eficiente, partimos de perguntas reais que p
 
 ---
 
-## 🧠 2. O Framework de Solução (Metodologia)
+##  2. O Framework de Solução (Metodologia)
 
 Antes de desenhar qualquer fluxo técnico, aplicamos um framework de 5 etapas para garantir que a mensuração esteja alinhada aos objetivos estratégicos de Marketing Performance.
 
@@ -75,7 +75,7 @@ Antes de desenhar qualquer fluxo técnico, aplicamos um framework de 5 etapas pa
 
 ---
 
-## 📑 3. Dicionário de Dados (SDR)
+##  3. Dicionário de Dados (SDR)
 
 Abaixo está o mapeamento técnico dos eventos que serão implementados na camada de dados (DataLayer). O parâmetro `items` deve acompanhar o usuário em toda a jornada para manter a integridade do funil.
 
@@ -90,7 +90,7 @@ Abaixo está o mapeamento técnico dos eventos que serão implementados na camad
 
 ---
 
-## 🗺️ 4. Fluxograma Arquitetural
+##  4. Fluxograma Arquitetural
 
 Representação visual da esteira de dados e interação dos parâmetros em cada disparo para o GA4.
 
@@ -98,14 +98,14 @@ Representação visual da esteira de dados e interação dos parâmetros em cada
 
 ---
 
-## 🏗️ Dia 03: Estrutura, Hierarquia e Instalação Prática do GTM
+##  Dia 03: Estrutura, Hierarquia e Instalação Prática do GTM
 
-### 🎯 Objetivo do Dia
+###  Objetivo do Dia
 Sair da teoria e realizar a instalação física do **Google Tag Manager (GTM)** em um ambiente real. Compreender a hierarquia organizacional da ferramenta (Conta vs. Contêiner) e validar o "encanamento" de dados através de um deploy utilizando o **GitHub Pages**.
 
 ---
 
-### 🛠️ O Que Foi Feito (Laboratório Prático)
+###  O Que Foi Feito (Laboratório Prático)
 
 #### 1. Arquitetura e Governança no GTM
 O primeiro passo foi criar a infraestrutura básica. Entendi que a **Conta** representa a empresa ou organização principal, enquanto o **Contêiner** representa o ativo digital específico (neste caso, focado em Web).
@@ -142,14 +142,14 @@ O teste retornou o selo verde de **"Connected"**. Isso atesta que a base da arqu
 
 ---
 
-### 💡 Insight de Engenharia de Analytics
+### Insight de Engenharia de Analytics
 > "A instalação do GTM é o alicerce de qualquer projeto de dados em Marketing. Uma tag mal posicionada no código não é um erro de sintaxe, é a perda de dados cruciais (como a origem de uma campanha) em um mundo onde a velocidade de carregamento define a permanência do usuário."
 
 **Metodologia Aplicada:** *Logic-First*. Antes de manipular qualquer arquivo no GitHub, documentei mentalmente e no papel a hierarquia das tags. Isso garantiu que os IDs sensíveis fossem tratados com as devidas políticas de segurança de dados em um repositório público.
 
 ---
 
-### ✅ Checklist de Conclusão
+###  Checklist de Conclusão
 * [x] Conta e Contêiner Web criados no GTM.
 * [x] Compreensão da distinção entre os scripts de `<head>` e `<body>`.
 * [x] Código HTML criado e injetado com os snippets corretamente.
@@ -159,15 +159,15 @@ O teste retornou o selo verde de **"Connected"**. Isso atesta que a base da arqu
 
 ---
 
-## 🚀 Dia 04: A Primeira Tag (GA4)
+##  Dia 04: A Primeira Tag (GA4)
 
 **Módulo:** 1 (Fundamentos da Coleta)  
 **Status:** Concluído ✅
 
-### 🎯 Objetivo do Dia
+###  Objetivo do Dia
 Estabelecer a conexão fundamental entre o site de testes (GitHub Pages) e o Google Analytics 4 (GA4) utilizando o Google Tag Manager (GTM). O foco foi garantir a coleta da métrica base (`page_view`) e validar rigorosamente o fluxo de dados tanto no front-end quanto no back-end.
 
-### 📘 Teoria Aplicada
+### Teoria Aplicada
 A arquitetura de dados do GA4 via GTM exige uma fundação antes de qualquer evento personalizado. 
 * **Tag do Google (Configuração):** Carrega a biblioteca global `gtag.js` e dispara eventos automáticos de medição otimizada. É o "abre-alas" do rastreamento.
 * **Validação em Duas Etapas (QA):** Nunca assumimos que um dado chegou apenas porque a tag disparou. A validação ocorre em duas frentes:
@@ -176,7 +176,7 @@ A arquitetura de dados do GA4 via GTM exige uma fundação antes de qualquer eve
 
 ---
 
-### 🛠️ Laboratório Prático
+###  Laboratório Prático
 
 #### Exercício 1: Configuração da Tag Base no GTM
 Criação da Tag do Google vinculada ao ID de Medida da propriedade de testes, acionada no evento `Initialization - All Pages` para garantir o carregamento prioritário.
@@ -195,21 +195,21 @@ Monitoramento em tempo real via **DebugView** do GA4. O teste comprova a chegada
 
 ---
 
-## 🚦 Dia 05: Acionadores Básicos e Ciclo da Página
+##  Dia 05: Acionadores Básicos e Ciclo da Página
 
 **Módulo:** 1 (Fundamentos da Coleta)  
 **Status:** Concluído ✅
 
-### 🎯 Objetivo do Dia
+###  Objetivo do Dia
 Dominar o "quando" disparar uma tag, entendendo o ciclo de vida de carregamento de uma página no navegador e criando filtros baseados em Variáveis de URL.
 
-### 📘 Teoria Aplicada
+###  Teoria Aplicada
 Para garantir dados limpos, não podemos disparar tudo ao mesmo tempo. Compreender a cronologia de renderização é vital:
 * **Initialization:** Usado para a base do GA4 (feito no Dia 04).
 * **Container Loaded (Page View):** O navegador começa a ler a estrutura. É onde verificamos se a URL atende a algum requisito específico.
 * **DOM Ready / Window Loaded:** Estágios posteriores para quando precisarmos interagir com botões ou aguardar recursos pesados.
 
-### 🛠️ Laboratório Prático e Evidências
+###  Laboratório Prático e Evidências
 
 O desafio foi criar uma Tag de Evento Personalizado (`view_sobre`) que só dispara quando o usuário entra na rota específica da página.
 
@@ -229,19 +229,19 @@ Utilização do recurso de *Query Parameters* (`?teste=sobre`) na URL para simul
 ![Validação Tag Fired](Dia05_tag_disparada.png)
 
 ---
-## 🧩 Dia 06: Variáveis Nativas e o Pilar da Governança de Dados
+##  Dia 06: Variáveis Nativas e o Pilar da Governança de Dados
 
 **Módulo:** 1 (Fundamentos da Coleta)  
 **Status:** Concluído ✅
 
-### 🎯 Objetivo do Dia
+###  Objetivo do Dia
 Compreender como o GTM extrai contexto dinâmico das interações do usuário e, mais importante, aplicar as melhores práticas de **Governança de Dados** na arquitetura de rastreamento.
 
-### 📘 Teoria Aplicada
+###  Teoria Aplicada
 * **Variáveis Nativas (Built-in):** Sensores pré-programados do GTM para ler atributos nativos do HTML e do navegador (ex: links de destino, classes CSS de botões e textos clicados).
 * **Single Source of Truth (Fonte Única da Verdade):** Princípio de governança onde um dado crítico de negócio (como IDs de ferramentas) é armazenado num único local centralizado, garantindo escalabilidade e prevenção de erros em manutenções futuras.
 
-### 🛠️ Laboratório Prático e Evidências
+###  Laboratório Prático e Evidências
 
 O desafio consistiu em duas missões: ativar o rastreamento profundo de interações de front-end ("Click Listener") e refatorar a tag base para seguir padrões de Governança e escalabilidade.
 
@@ -249,7 +249,7 @@ O desafio consistiu em duas missões: ativar o rastreamento profundo de interaç
 * Ativação das variáveis Built-in de Clique (`Click Classes`, `Click ID`, `Click URL`, `Click Text`).
 * Criação de um Acionador genérico de Cliques (All Elements) para injetar o *Listener* no código fonte.
 
-**2. 🛡️ Governança de Dados e Refatoração:**
+**2.  Governança de Dados e Refatoração:**
 * Criação de uma Variável Definida pelo Usuário do tipo "Permanente" (Constante) para blindar o ID da Métrica do GA4 (`G-E8JYQ3ZYX6`).
 * Refatoração das tags existentes: substituição de dados *hardcoded* (digitados manualmente) pela chamada dinâmica da variável `{{Permanente - ID do GA4}}`. Isso garante que futuras manutenções sejam feitas num único nó da arquitetura.
 
@@ -259,20 +259,20 @@ Validação do evento assíncrono `gtm.click`. A auditoria na aba "Variables" co
 ![Validação de Variáveis, Clique e Governança](Dia06_variaveis_qa.png)
 
 ---
-## 🎯 Dia 07: Auto-Event Tracking, Engenharia Reversa e Refatoração de Gatilhos
+##  Dia 07: Auto-Event Tracking, Engenharia Reversa e Refatoração de Gatilhos
 
 **Módulo:** 1 (Fundamentos da Coleta)  
 **Status:** Concluído ✅
 
-### 🎯 Objetivo do Dia
+###  Objetivo do Dia
 Aprender a isolar interações de alto valor (Auto-Event Tracking), aplicar engenharia reversa para descobrir atributos ocultos no HTML e refatorar arquiteturas de rastreamento buscando o "Padrão Ouro" de segurança (uso de IDs em vez de Textos), aplicando rigorosas práticas de Governança e ofuscação de dados sensíveis.
 
-### 📘 Teoria Aplicada
+###  Teoria Aplicada
 * **Just Links vs. All Elements:** Entendimento de quando rastrear âncoras (`<a>`) com destino de URL (Just Links) e quando rastrear cliques genéricos na interface (botões, modais) diretamente no DOM (All Elements).
 * **Engenharia Reversa no Front-end:** Utilização do Tag Assistant para auditar eventos reais e descobrir quais atributos (Classes, Textos, IDs) estão disponíveis no elemento alvo.
 * **O "Padrão Ouro" do Tracking:** Por que rastrear eventos por `Click ID` é infinitamente mais robusto do que por `Click Text` (textos podem sofrer testes A/B ou alterações de copy, enquanto IDs são fixos, únicos e estruturais).
 
-### 🛠️ Laboratório Prático e Evidências
+###  Laboratório Prático e Evidências
 
 O laboratório simulou um cenário real onde o botão alvo no front-end não possuía documentação prévia, exigindo investigação, adaptação e posterior refatoração da arquitetura.
 
@@ -284,7 +284,7 @@ O laboratório simulou um cenário real onde o botão alvo no front-end não pos
 <br>
 ![QA Inicial - Tag Disparada via Click Text](Dia07_02_qa_click_text.png)
 
-**2. 🛡️ Engenharia Reversa e Refatoração (A Busca pela Robustez):**
+**2. Engenharia Reversa e Refatoração (A Busca pela Robustez):**
 * Durante a auditoria do dataLayer, foi identificado que o botão possuía um ID oculto (`btn-teste`).
 * **Refatoração:** O Acionador original foi editado para abandonar o rastreamento frágil por texto (`Click Text`) e adotar a regra condicional absoluta: `Click ID` é igual a `btn-teste`.
 
@@ -296,16 +296,16 @@ Validação positiva da nova arquitetura. A auditoria confirmou a captura perfei
 ![Validação da Captura do ID no Front-end](Dia07_04_qa_click_id.png)
 
 ---
-## 🎯 Dia 08: Rastreamento Avançado de Formulários (AJAX) e Resolução de Falsos Positivos
+##  Dia 08: Rastreamento Avançado de Formulários (AJAX) e Resolução de Falsos Positivos
 
-### 📝 Visão Geral do Projeto
+###  Visão Geral do Projeto
 No ambiente de Web Analytics corporativo, um dos maiores desafios enfrentados por Engenheiros de Dados é o rastreamento preciso de conversões em formulários modernos. Formulários baseados em requisições assíncronas (AJAX) não recarregam a página ao serem enviados. Como consequência, estratégias comuns de rastreamento (como gatilhos baseados em cliques no botão de envio ou submissão simples de formulário) geram um volume massivo de **Falsos Positivos**, registrando conversões mesmo quando o usuário falha na validação de campos obrigatórios.
 
 Neste laboratório prático (Dia 08), atuando tanto na camada de **Desenvolvimento Front-end** quanto na de **Arquitetura de Analytics**, implementamos uma solução tática de alta precisão baseada no comportamento do Document Object Model (DOM) para mitigar completamente os falsos positivos.
 
 ---
 
-### 🛠️ O que foi feito hoje
+###  O que foi feito hoje
 
 #### 1. Implementação no Front-end (`index.html`)
 Desenvolvemos e injetamos uma estrutura de formulário AJAX resiliente para captura de leads (Newsletter) diretamente no código fonte do site de testes hospedado no GitHub Pages. 
@@ -323,7 +323,7 @@ Para capturar o sucesso real da conversão sem depender de um programador para d
 
 ---
 
-### 🚀 Sucesso Obtido
+###  Sucesso Obtido
 
 * **Zero Falsos Positivos:** O evento só é disparado quando a mensagem de sucesso é efetivamente renderizada na tela para o usuário, garantindo integridade absoluta à métrica de conversão.
 * **Rastreamento Assíncrono Perfeito:** Superamos a limitação física do recarregamento de página em ambientes AJAX/SPA.
@@ -331,7 +331,7 @@ Para capturar o sucesso real da conversão sem depender de um programador para d
 
 ---
 
-### 📸 Evidências do Laboratório Prático (QA)
+###  Evidências do Laboratório Prático (QA)
 
 **A Lógica do Acionador no GTM** *Configuração detalhada do gatilho de visibilidade, operando sob monitoramento do DOM do navegador.* ![Configuração do Acionador de Visibilidade](Dia08-gtm-acionador-visibilidade.png)
 
