@@ -295,4 +295,49 @@ Validação positiva da nova arquitetura. A auditoria confirmou a captura perfei
 
 ![Validação da Captura do ID no Front-end](Dia07_04_qa_click_id.png)
 
+---
+## 🎯 Dia 08: Rastreamento Avançado de Formulários (AJAX) e Resolução de Falsos Positivos
+
+### 📝 Visão Geral do Projeto
+No ambiente de Web Analytics corporativo, um dos maiores desafios enfrentados por Engenheiros de Dados é o rastreamento preciso de conversões em formulários modernos. Formulários baseados em requisições assíncronas (AJAX) não recarregam a página ao serem enviados. Como consequência, estratégias comuns de rastreamento (como gatilhos baseados em cliques no botão de envio ou submissão simples de formulário) geram um volume massivo de **Falsos Positivos**, registrando conversões mesmo quando o usuário falha na validação de campos obrigatórios.
+
+Neste laboratório prático (Dia 08), atuando tanto na camada de **Desenvolvimento Front-end** quanto na de **Arquitetura de Analytics**, implementamos uma solução tática de alta precisão baseada no comportamento do Document Object Model (DOM) para mitigar completamente os falsos positivos.
+
+---
+
+### 🛠️ O que foi feito hoje
+
+#### 1. Implementação no Front-end (`index.html`)
+Desenvolvemos e injetamos uma estrutura de formulário AJAX resiliente para captura de leads (Newsletter) diretamente no código fonte do site de testes hospedado no GitHub Pages. 
+* Utilizamos o método `event.preventDefault()` para interceptar e bloquear o comportamento padrão de recarregamento da página.
+* Criamos uma estrutura condicional onde, mediante o sucesso do envio, o formulário é ocultado (`display: none`) e um elemento de feedback de sucesso (`<div id="mensagem-sucesso">`) é dinamicamente injetado na tela via manipulação JavaScript.
+
+#### 2. Configuração Inteligente no Google Tag Manager (GTM)
+Para capturar o sucesso real da conversão sem depender de um programador para disparar uma camada de dados dedicada (`dataLayer`), criamos um "radar" de comportamento visual no GTM:
+* **Acionador:** Tipo **Visibilidade do Elemento** configurado pelo método de seleção **ID** buscando especificamente a string `mensagem-sucesso`.
+* **Configuração Crítica:** Ativamos a diretiva **"Acompanhar alterações do DOM"**. Essa flag força o container do GTM a monitorar ativamente a árvore HTML do site em tempo real, disparando o gatilho no milissegundo exato em que o JavaScript altera o estado do elemento de invisível para visível na tela do usuário.
+
+#### 3. Integração e Governança com o GA4
+* **Tag de Evento:** Vinculamos o acionador de visibilidade a uma nova tag do Google Analytics 4 utilizando a nomenclatura recomendada oficial do Google: `generate_lead`.
+* **Segurança da Informação:** Durante o processo de auditoria de dados, aplicamos rígidos padrões de governança, realizando a **ofuscação completa do ID do container GTM** nas capturas de tela finais para assegurar a confidencialidade e a segurança da infraestrutura de rastreamento do portfólio.
+
+---
+
+### 🚀 Sucesso Obtido
+
+* **Zero Falsos Positivos:** O evento só é disparado quando a mensagem de sucesso é efetivamente renderizada na tela para o usuário, garantindo integridade absoluta à métrica de conversão.
+* **Rastreamento Assíncrono Perfeito:** Superamos a limitação física do recarregamento de página em ambientes AJAX/SPA.
+* **Padrão de Governança Corporativa:** Documentação limpa, padronizada e segura seguindo boas práticas internacionais de engenharia de web analytics.
+
+---
+
+### 📸 Evidências do Laboratório Prático (QA)
+
+**A Lógica do Acionador no GTM** *Configuração detalhada do gatilho de visibilidade, operando sob monitoramento do DOM do navegador.* ![Configuração do Acionador de Visibilidade](Dia08-gtm-acionador-visibilidade.png)
+
+**A Experiência do Usuário (Front-end)** *Interface do site de testes apresentando o disparo visual de sucesso após o preenchimento correto do formulário de newsletter.* ![Feedback Visual de Sucesso no Front-end](Dia08_Formulário_enviado_com%20sucesso!.png)
+
+**Auditoria e Validação Final (Tag Assistant)** *A prova irrefutável do sucesso técnico. O evento `Element Visibility` foi registrado na linha do tempo, engatilhando com sucesso a tag de conversão do GA4 com o ID do container devidamente ocultado.* ![Validação de QA no Tag Assistant](Dia08-qa-tag-assistant.png)
+
+---
 
