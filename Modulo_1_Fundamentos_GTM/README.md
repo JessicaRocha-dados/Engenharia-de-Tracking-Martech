@@ -377,7 +377,7 @@ Configurámos um radar visual focado num elemento específico do DOM, garantindo
 
 ###  Evidências do Laboratório Prático (QA)
 
-**Auditoria e Validação Final (Tag Assistant)** *A prova irrefutável do sucesso técnico. O evento `Element Visibility` foi isolado na linha do tempo, engatilhando com sucesso a tag de conversão do GA4 ao atingir 50% de visibilidade do rodapé.*
+**Auditoria e Validação Final (Tag Assistant)** * O evento `Element Visibility` foi isolado na linha do tempo, engatilhando com sucesso a tag de conversão do GA4 ao atingir 50% de visibilidade do rodapé.*
 
 ![Validação de Visibilidade do Rodapé no Tag Assistant](dia-09-qa-tag-assistant.png)
 
