@@ -341,3 +341,45 @@ Para capturar o sucesso real da conversão sem depender de um programador para d
 
 ---
 
+##  Dia 09: Element Visibility e Engajamento de Leitura
+
+###  Visão Geral do Projeto
+Em arquiteturas de Web Analytics, basear a análise de engajamento exclusivamente em cliques ("Click Tracking") gera uma visão míope sobre o comportamento do utilizador. Muitas vezes, um utilizador consome um conteúdo extenso (como um artigo de blog ou uma Landing Page longa) de forma altamente engajada sem nunca clicar num botão. 
+
+Neste laboratório prático (Dia 09), foi implementado uma métrica qualitativa avançada baseada no comportamento da *Viewport* do navegador. O objetivo foi rastrear a **Visibilidade de Elemento** para medir o consumo efetivo do conteúdo até ao final da página (o rodapé), gerando um evento no Google Analytics 4.
+
+---
+
+### 🛠️ O que foi feito hoje
+
+#### 1. Implementação no Front-end (`index.html`)
+Para simular um ambiente de página longa, injetámos um bloco de distanciamento estrutural no código-fonte e implementámos o alvo da nossa captura visual no final do documento:
+* Criação de uma `div` com altura forçada (`height: 800px`) para exigir a rolagem da página por parte do utilizador.
+* Inserção de uma tag `<footer>` contendo o ID exclusivo `rodape-site`, que servirá como âncora para o rastreamento do GTM.
+
+#### 2. Configuração no Google Tag Manager (GTM)
+Configurámos um radar visual focado num elemento específico do DOM, garantindo alta precisão na recolha de dados:
+* **Acionador:** Tipo **Visibilidade do Elemento** configurado via método de seleção **ID** buscando o código `rodape-site`.
+* **Regra de Qualidade:** Definimos a "Percentagem mínima visível" em **50%**, garantindo que o disparo só ocorra quando pelo menos metade da área do rodapé entrar no ecrã do utilizador. Isto evita "falsos positivos" causados por uma rolagem superficial.
+* **Governança de Disparo:** Regra definida como "Uma vez por página", evitando a duplicação do evento caso o utilizador suba e desça a página repetidas vezes.
+
+#### 3. Integração com o GA4
+* **Tag de Evento:** Criação da tag `GA4 - Evento - View Footer`, ancorada no acionador de visibilidade e direcionando o payload de dados para a propriedade do GA4.
+
+---
+
+###  Sucesso Obtido
+
+* **Medição de Engajamento Real:** Conseguimos comprovar de forma analítica que o utilizador consumiu todo o conteúdo da página antes de sair.
+* **Métrica Qualitativa Isolada:** Ao contrário do gatilho genérico de *Scroll Depth* (que mede percentagens abstratas da página inteira), fomos cirúrgicos ao focar num elemento estrutural chave da interface.
+
+---
+
+###  Evidências do Laboratório Prático (QA)
+
+**Auditoria e Validação Final (Tag Assistant)** *A prova irrefutável do sucesso técnico. O evento `Element Visibility` foi isolado na linha do tempo, engatilhando com sucesso a tag de conversão do GA4 ao atingir 50% de visibilidade do rodapé.*
+
+![Validação de Visibilidade do Rodapé no Tag Assistant](dia-09-qa-tag-assistant.png)
+
+---
+
