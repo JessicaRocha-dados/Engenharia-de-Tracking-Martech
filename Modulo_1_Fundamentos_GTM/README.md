@@ -350,7 +350,7 @@ Neste laboratório prático (Dia 09), foi implementado uma métrica qualitativa 
 
 ---
 
-### 🛠️ O que foi feito hoje
+###  O que foi feito hoje
 
 #### 1. Implementação no Front-end (`index.html`)
 Para simular um ambiente de página longa, injetámos um bloco de distanciamento estrutural no código-fonte e implementámos o alvo da nossa captura visual no final do documento:
