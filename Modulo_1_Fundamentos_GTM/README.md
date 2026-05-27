@@ -383,3 +383,38 @@ Configurámos um radar visual focado num elemento específico do DOM, garantindo
 
 ---
 
+##  Dia 10: Auditoria Avançada e Debug (Tags Not Fired)
+
+### Visão Geral do Projeto
+A construção de uma arquitetura de dados confiável exige mais do que apenas criar Tags e Acionadores; exige a habilidade de diagnosticar falhas na recolha de dados. Quando uma conversão de marketing não é registrada, o analista deve ser capaz de isolar o momento exato em que a regra do contêiner foi quebrada.
+
+Neste laboratório (Dia 10), focámos no desenvolvimento da competência de **QA (Quality Assurance) e Debugging**, utilizando o Tag Assistant para ler a "lógica de bloqueio" do Google Tag Manager.
+
+### O que foi feito hoje
+
+#### 1. Simulação de um Erro de Implementação
+Para treinar a investigação, criámos intencionalmente uma "armadilha" (um erro de lógica) no ambiente de testes:
+* **Acionador Falho:** Criámos um gatilho de Exibição de Página configurado para disparar apenas quando a regra `Page URL` contivesse um caminho impossível (`/pagina-inexistente-teste`).
+* **Tag de Evento:** Vinculámos este acionador à tag `GA4 - Evento - Simulacao de Erro`, garantindo que ela estaria programada para falhar.
+
+#### 2. Metodologia de Investigação no Tag Assistant (Debug)
+Abandonámos a visão de "Resumo"  e operámos na análise de eventos isolados na linha do tempo:
+* Isolámos o momento do carregamento da página (evento `DOM pronto`).
+* Explorámos a secção **Tags Not Fired** para localizar a tag silenciada.
+* Analisámos o *Drill-down* de acionamento para encontrar a raiz do problema.
+
+
+### Sucesso Obtido
+
+* **Eliminação de "Achismos":** Demonstramos que o GTM fornece provas inequívocas de falha. Ao invés de especular por que uma tag não disparou, conseguimos identificar visualmente o `❌` vermelho imposto pelo motor de regras do GTM.
+* **Governança Acelerada:** Esta competência permite reduzir drasticamente o tempo de resposta e correção caso as URLs do site sejam alteradas pela equipe de desenvolvimento ou campanhas de tráfego quebrem os parâmetros de UTMs.
+
+
+### Evidências do Laboratório Prático (QA)
+
+**Auditoria e Isolamento de Falha:** *A prova técnica de que o GTM barrou o envio do pacote de dados para o GA4. Note a avaliação das regras de disparo com a sinalização `❌`, provando a não-conformidade com a regra da URL naquele evento específico.*
+
+![Diagnóstico de Bloqueio no Tag Assistant](Dia10_debug-tags-not-fired.png)
+
+---
+
