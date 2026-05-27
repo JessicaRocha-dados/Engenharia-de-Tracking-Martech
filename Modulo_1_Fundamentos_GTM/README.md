@@ -498,4 +498,4 @@ Realizámos uma varredura completa no *Workspace* para refatorar os nomes de tod
 ---
 
 ###  Fim do Módulo 1
-Com a conclusão destes 14 dias, finalizo a fundação da minha arquitetura de Web Analytics. O ambiente passou de um contêiner vazio para uma estrutura profissional com captura de eventos visuais, tratamento de falsos positivos (AJAX), versionamento seguro e governança de dados. Pronta para o Módulo 2: O poder da Data Layer!
+Com a conclusão destes 14 dias, finalizo a fundação da minha arquitetura de Web Analytics. O ambiente passou de um contêiner vazio para uma estrutura profissional com captura de eventos visuais, tratamento de falsos positivos (AJAX), versionamento seguro e governança de dados. 
