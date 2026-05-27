@@ -417,4 +417,39 @@ Abandonámos a visão de "Resumo"  e operámos na análise de eventos isolados n
 ![Diagnóstico de Bloqueio no Tag Assistant](Dia10_debug-tags-not-fired.png)
 
 ---
+##  Dia 11: Governança, Versionamento e Rollback
 
+### Visão Geral do Projeto
+Em arquiteturas de dados complexas, gerir o ciclo de vida do código é tão importante quanto escrevê-lo. A publicação de tags no Google Tag Manager afeta diretamente o código front-end do site em produção. Portanto, um sistema robusto de controle de versão é obrigatório para mitigar riscos de quebra de layout ou perda de dados.
+
+Neste laboratório (Dia 11), implementámos práticas de governança, utilizando nomenclatura semântica para lançamentos e executando um procedimento de emergência (*Rollback*) para reverter uma publicação falha.
+
+
+### O que foi feito hoje
+
+#### 1. Publicação e Nomenclatura Semântica (Release v1.0)
+Consolidámos todo o trabalho de infraestrutura de rastreamento (GA4 Base, Eventos de Clique, Scroll e Visibilidade) num único pacote de publicação.
+* Criámos a versão estável `v1.0 - Base GA4 e Rastreamento de Engajamento`.
+* Preenchemos a documentação interna da versão (Descrição) para manter o histórico claro para futuros auditores ou membros da equipe.
+
+#### 2. Simulação de Incidente em Produção (Release v1.1)
+Para testar a resiliência do sistema, injetámos uma tag fictícia de HTML Personalizado (simulando um script problemático) e publicámos a `v1.1 - Tag Problematica (Erro Simulado)`, colocando o erro propositadamente no ambiente *Live*.
+
+#### 3. Procedimento de Rollback (Disaster Recovery)
+Em resposta à simulação de erro no ambiente de produção, operámos o painel de versões do GTM para efetuar a reversão imediata do código:
+* Isolámos a versão estável anterior (`v1.0`).
+* Sobrescrevemos o ambiente *Live*, desativando instantaneamente a tag problemática e restaurando a integridade da recolha de dados, sem a necessidade de eliminar ou alterar o *Workspace* atual.
+
+###  Sucesso Obtido
+
+* **Segurança Arquitetural:** Garantimos que qualquer erro futuro de implementação não será fatal, pois o ambiente possui pontos de restauro documentados e acessíveis em poucos cliques.
+* **Profissionalização do Histórico:** Substituímos publicações genéricas por um histórico rastreável, onde cada alteração possui um nome descritivo (ex: `v1.0`, `v1.1`), facilitando a auditoria de quem publicou o quê e quando.
+
+
+### Evidências do Laboratório Prático (QA)
+
+**Auditoria de Versionamento e Execução de Rollback:** *Visualização do painel de versões no momento exato em que a versão v1.0 está a ser preparada para substituir a versão problemática v1.1 no ambiente Live.*
+
+![Execução de Rollback no GTM](Dia11-qa-rollback.png)
+
+---
