@@ -453,3 +453,49 @@ Em resposta à simulação de erro no ambiente de produção, operámos o painel
 ![Execução de Rollback no GTM](Dia11-qa-rollback.png)
 
 ---
+##  Dias 12, 13 e 14: Governança de Dados e A Tríade do GTM
+
+### Visão Geral do Projeto
+Em projetos de Web Analytics e Engenharia de Dados, o maior gargalo técnico na escalabilidade não é a tecnologia, mas a desorganização. Um Google Tag Manager (GTM) sem padrões de nomenclatura gera eventos duplicados, dificulta o *troubleshooting* (debug) e cria dependência de quem configurou originalmente a ferramenta.
+
+Nesta fase (Dias 12 a 14), o foco do laboratório transitou da implementação técnica para a **Governança de Dados**. Estabelecemos uma taxonomia rígida para organizar os elementos base da ferramenta, conhecidos como A Tríade do GTM (Tags, Acionadores e Variáveis).
+
+---
+
+###  O que foi feito hoje
+
+#### 1. Padronização da Tríade do GTM
+Realizámos uma varredura completa no *Workspace* para refatorar os nomes de todos os elementos, garantindo previsibilidade e clareza para qualquer analista que venha a interagir com o contêiner:
+* **Tags (O Mensageiro):** Adotou-se o padrão `[Ferramenta] - [Tipo de Evento] - [Ação/Nome]`.
+    * *Exemplos:* `GA4 - Config - Tag do Google`, `GA4 - Evento - Generate Lead`.
+* **Acionadores (O Radar):** Adotou-se o padrão `[Tipo de Disparo] - [Elemento Alvo]`.
+    * *Exemplos:* `Clique - Botao ID Teste`, `Visibilidade - Rodape 50%`, `PV - Erro Simulado (URL Incorreta)`.
+
+#### 2. Limpeza de Ambiente e Nova Release (v1.2)
+* Removemos tags órfãs e de teste de stress (utilizadas no processo de *Rollback* do Dia 11) para manter a higiene do ambiente de trabalho.
+* Publicámos a versão `v1.2 - Padronizacao e Governanca da Triade`, garantindo que o código em produção reflete os novos padrões de qualidade e documentação estabelecidos.
+
+---
+
+### Sucesso Obtido
+
+* **Arquitetura Escalável:** O contêiner agora possui uma estrutura onde novas implementações (seja para Google Ads, Meta Ads ou novas features do GA4) têm um guia de estilo claro a seguir.
+* **Auditoria Visual:** É possível entender o fluxo de dados (Data Flow) apenas lendo a lista de tags e acionadores, sem necessidade de abrir cada elemento individualmente para investigar a sua função.
+
+---
+
+###  Evidências do Laboratório Prático (Governança e Tríade do GTM)
+
+**1. Padronização de Tags:** *Visão do workspace limpo, seguindo a taxonomia estruturada.*
+![Lista de Tags Padronizadas](12,13,14_Tags.png)
+
+**2. Padronização de Acionadores:** *Visão dos gatilhos renomeados para o padrão de elementos alvo.*
+![Lista de Acionadores Padronizados](12,13,14_Acionadores.png)
+
+**3. Publicação e Histórico de Versão (v1.2):** *Comprovação da limpeza do ambiente, exclusão da tag de erro e criação de uma release oficial documentada.*
+![Resumo da Versão 1.2](dias12-14-governanca-versao.png)
+
+---
+
+###  Fim do Módulo 1
+Com a conclusão destes 14 dias, finalizo a fundação da minha arquitetura de Web Analytics. O ambiente passou de um contêiner vazio para uma estrutura profissional com captura de eventos visuais, tratamento de falsos positivos (AJAX), versionamento seguro e governança de dados. Pronta para o Módulo 2: O poder da Data Layer!
