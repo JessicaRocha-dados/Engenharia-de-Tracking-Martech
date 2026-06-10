@@ -41,7 +41,7 @@ Neste dia, focamos em um dos conceitos mais importantes do web analytics e gover
 
 ---
 
-## Teoria: O Padrão Ouro do Rastreamento
+## Teoria: O Padrão do Rastreamento
 
 Rastrear interações baseadas em elementos visuais do HTML (como classes CSS ou IDs) é uma prática frágil em ambientes de produção corporativos, pois qualquer mudança de layout ou design feita pela equipe de desenvolvimento pode quebrar a coleta de dados silenciosamente.
 
