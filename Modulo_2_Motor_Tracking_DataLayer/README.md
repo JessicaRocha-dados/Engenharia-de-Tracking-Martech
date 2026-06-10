@@ -66,7 +66,7 @@ window.dataLayer.push({
 
 O retorno `true` no console confirmou que o objeto foi inserido com sucesso na camada de dados.
 
-![Console do navegador mostrando o dataLayer.push](01-console-datalayer-push.png)
+![Console do navegador mostrando o dataLayer.push](Dia16_01-console-datalayer-push.png)
 
 
 ### Criação da Regra de Captura no GTM
@@ -87,14 +87,14 @@ Com a variável criada e o ambiente de Preview atualizado, disparamos o evento n
 
 Na aba **Variáveis**, confirmamos que a variável `dlv - usuario` conseguiu encontrar a chave e capturou com sucesso o valor dinâmico `"visitante"`.
 
-![Tag Assistant mostrando a aba Variáveis](02-gtm-tag-assistant-variables.png)
+![Tag Assistant mostrando a aba Variáveis](Dia16_02-gtm-tag-assistant-variables.png)
 
 
 #### Verificação da Estrutura Crua (Data Layer)
 
 Na aba **Camada de dados**, auditamos os bastidores. Foi possível visualizar exatamente o pacote de dados estruturados recebido pelo GTM, confirmando que a chave `usuario: "visitante"` estava limpa e disponível.
 
-![Tag Assistant mostrando a aba Camada de dados](03-gtm-tag-assistant-datalayer.png)
+![Tag Assistant mostrando a aba Camada de dados](Dia16_03-gtm-tag-assistant-datalayer.png)
 
 
 ## Conclusão e Aplicação
