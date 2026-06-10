@@ -39,8 +39,6 @@ Ao expandir o Objeto `0`, pudemos ler chaves riquíssimas em detalhes, sem nenhu
 
 Neste dia, focamos em um dos conceitos mais importantes do web analytics e governança de dados: extrair informações seguras do código do site para o Google Tag Manager usando a **Camada de Dados (Data Layer)**.
 
----
-
 ## Teoria: O Padrão do Rastreamento
 
 Rastrear interações baseadas em elementos visuais do HTML (como classes CSS ou IDs) é uma prática frágil em ambientes de produção corporativos, pois qualquer mudança de layout ou design feita pela equipe de desenvolvimento pode quebrar a coleta de dados silenciosamente.
@@ -99,8 +97,6 @@ Na aba **Camada de dados**, auditamos os bastidores. Foi possível visualizar ex
 ![Tag Assistant mostrando a aba Camada de dados](03-gtm-tag-assistant-datalayer.png)
 
 
----
-
 ## Conclusão e Aplicação
 
 Conseguimos extrair a informação com **100% de precisão**. A grande vantagem dessa arquitetura é a **automação**: basta inserir a variável `{{dlv - usuario}}` em Tags do Google Analytics 4 ou Meta Ads.
@@ -113,5 +109,5 @@ Se futuramente o sistema enviar valores diferentes — como `"admin"` ou `"clien
 | Sistema envia `usuario: "admin"` | GTM captura → `{{dlv - usuario}}` = `"admin"` |
 | Sistema envia `usuario: "cliente_premium"` | GTM captura → `{{dlv - usuario}}` = `"cliente_premium"` |
 
-> **Regra de ouro:** o nome da chave no `dataLayer.push` do código (`usuario`) deve ser **idêntico** ao nome configurado no GTM. Qualquer divergência retorna `undefined`.
+> **Regra:** o nome da chave no `dataLayer.push` do código (`usuario`) deve ser **idêntico** ao nome configurado no GTM. Qualquer divergência retorna `undefined`.
                                                                                                                                                                                                                          
