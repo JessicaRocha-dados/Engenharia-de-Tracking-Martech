@@ -110,4 +110,121 @@ Se futuramente o sistema enviar valores diferentes — como `"admin"` ou `"clien
 | Sistema envia `usuario: "cliente_premium"` | GTM captura → `{{dlv - usuario}}` = `"cliente_premium"` |
 
 > **Regra:** o nome da chave no `dataLayer.push` do código (`usuario`) deve ser **idêntico** ao nome configurado no GTM. Qualquer divergência retorna `undefined`.
-                                                                                                                                                                                                                         
+>
+> 
+---
+
+# Dia 17: Eventos Personalizados (Custom Events) & Variáveis Aninhadas (Dot Notation)
+
+Neste dia, elevamos o nível do laboratório combinando o conceito de acionadores baseados em respostas do sistema com a extração de dados complexos e aninhados usando a **Notação de Ponto (Dot Notation)**.
+
+---
+
+## Teoria: Acionadores de Sistema vs. Interações de Interface
+
+Confiar apenas em cliques de botões ou IDs de elementos HTML para mensurar conversões é uma prática instável. Se um usuário clicar em um botão de formulário que contém erros de preenchimento, a conversão é disparada incorretamente.
+
+Os **Eventos Personalizados (Custom Events)** corrigem essa falha, pois escutam o back-end do site. O GTM só reage quando o sistema valida a ação com sucesso e envia um sinal definitivo via Camada de Dados utilizando a chave reservada `'event'`.
+
+Além disso, em cenários complexos como o e-commerce, os dados não vêm soltos na superfície. Eles chegam estruturados em objetos e arrays (listas). Para acessá-los, mapeamos o caminho exato substituindo os colchetes por pontos, navegando pela hierarquia até o dado final.
+
+---
+
+##  Prática — Parte 1: Evento Personalizado (`lead_gerado`)
+
+Simulamos o comportamento de um formulário que, após o envio bem-sucedido, notifica o GTM.
+
+### Passo 1: Injeção do Evento no Console
+
+Disparamos o evento de sistema utilizando o método `push`:
+
+```javascript
+window.dataLayer = window.dataLayer || [];
+window.dataLayer.push({
+  'event': 'lead_gerado'
+});
+```
+
+![Console com o push do evento lead_gerado executado com retorno true](Dia17_01-console-lead-event-push.png)
+
+---
+
+### Passo 2: Validação do Gatilho no Tag Assistant
+
+Configuramos um **Acionador** do tipo **Evento Personalizado** para ouvir o nome exato `lead_gerado`. No modo de depuração, o evento foi capturado na linha do tempo e a variável nativa `_event` registrou o valor `"lead_gerado"` corretamente.
+
+![Tag Assistant mostrando o evento lead_gerado capturado e a variável _event com valor "lead_gerado"](Dia17_02-tag-assistant-lead-event-validation.png)
+
+---
+
+##  Prática — Parte 2: Extração de Dados Aninhados de E-commerce
+
+Aprofundamos o estudo simulando o evento de adição ao carrinho (`add_to_cart`), onde o preço do produto está encapsulado dentro de um objeto de e-commerce e uma lista de itens.
+
+### Passo 1: Injeção do Payload de E-commerce
+
+Injetamos uma estrutura de dados padrão GA4 contendo chaves aninhadas:
+
+```javascript
+window.dataLayer = window.dataLayer || [];
+window.dataLayer.push({
+  'event': 'add_to_cart',
+  'ecommerce': {
+    'currency': 'BRL',
+    'value': 399.90,
+    'items': [
+      {
+        'item_id': 'NK-12345',
+        'item_name': 'Tênis Nike Air Zoom',
+        'item_category': 'Calçados Esportivos',
+        'price': 399.90,
+        'quantity': 1
+      }
+    ]
+  }
+});
+```
+
+![Console com o payload de e-commerce add_to_cart injetado com estrutura aninhada](Dia17_03-console-ecommerce-nested-push.png)
+
+---
+
+### Passo 2: Configuração da Variável com Notação de Ponto (Dot Notation)
+
+Para ler o preço contido no primeiro item do array, criamos uma **Variável de Camada de Dados** mapeando o caminho lógico:
+
+| Segmento         | Significado                                      |
+|------------------|--------------------------------------------------|
+| `ecommerce`      | Objeto raiz do payload                           |
+| `items`          | Array de produtos                                |
+| `0`              | Primeiro item do array (índice começa em zero)   |
+| `price`          | Chave com o valor numérico do preço              |
+
+**Nome da variável no GTM:** `dlv - item price`
+
+---
+
+### Passo 3: Validação do Valor Dinâmico
+
+Após atualizar o ambiente de Preview e reexecutar o push, inspecionamos o evento `add_to_cart`. Na aba **Variáveis**, confirmamos que a variável `dlv - item price` isolou com sucesso o valor numérico `399.9`.
+
+![Tag Assistant mostrando a variável dlv - item price com valor 399.9 no evento add_to_cart](Dia17_04-tag-assistant-nested-variable-success.png)
+
+---
+
+## 🎯 Conclusão e Impacto de Negócio
+
+A união do **Acionador Customizado** com a **Variável Aninhada** cria a fundação para o rastreamento avançado de conversões.
+
+Agora o GTM:
+
+- **Sabe o momento exato** em que a ação de e-commerce ocorre (`add_to_cart`)
+- **Possui o valor financeiro preciso** (`399.9`) pronto para ser injetado em tags de conversão
+
+Isso permite:
+
+- Cálculo exato do **ROAS** (Retorno sobre Investimento em Anúncios)
+- Alimentação dos algoritmos de **lances automáticos** do Google Ads e Meta Ads com dados de alta fidelidade
+- Rastreamento confiável baseado em **resposta do sistema**, e não em interação de interface
+
+---
