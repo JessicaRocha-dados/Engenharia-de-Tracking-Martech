@@ -228,3 +228,47 @@ Isso permite:
 - Rastreamento confiável baseado em **resposta do sistema**, e não em interação de interface
 
 ---
+# Dia 18: Expressões Regulares (RegEx) em Acionadores
+
+Neste dia, introduzimos o uso de Expressões Regulares (RegEx) para criar regras dinâmicas e inteligentes de disparo no Google Tag Manager, superando a limitação de URLs estáticas.
+
+
+## Teoria:
+
+Em arquiteturas reais de web analytics, raramente lidamos com URLs perfeitamente exatas. Lidamos frequentemente com parâmetros de busca, IDs dinâmicos de produtos e variações de rotas de campanhas. O RegEx atua como um "curinga" de rastreamento, permitindo que o GTM identifique padrões estruturais em vez de textos engessados.
+
+Os três símbolos fundamentais aplicados neste laboratório foram:
+* **`^` (Circunflexo):** Trava a correspondência no **início** do texto (Começa com).
+* **`.` (Ponto final):** Representa **qualquer caractere** (uma letra, um número, um hífen, etc.).
+* **`*` (Asterisco):** Indica que a regra anterior pode se repetir **zero ou mais vezes**.
+
+**A Fórmula:** `^/projeto-tracking/blog/.*`
+*Tradução do GTM:* "O gatilho deve disparar se a URL começar obrigatoriamente com `/projeto-tracking/blog/` e, depois disso, aceitar absolutamente qualquer conjunto de caracteres."
+
+
+## Prática: 
+
+Criamos um acionador do tipo **Exibição de página (Page View)** configurado para reagir apenas quando a URL se encaixa no padrão estabelecido pela expressão.
+
+### Configuração no GTM:
+1. **Tipo de Acionador:** Exibição de página (Page View).
+2. **Condição:** Algumas exibições de página.
+3. **Regra:** `{{Page Path}}` -> `corresponde a RegEx (ignorar caso)` -> `^/projeto-tracking/blog/.*`
+
+> **Imagem de Referência:**
+> ![Configuração do Acionador com RegEx](./Dia18_01-configuracao-acionador-regex.png)
+
+
+## Laboratório de Debug: Erro 404 e URL Encoding
+
+Durante os testes práticos de simulação da pasta (`/blog/`), esbarramos em dois conceitos avançados de infraestrutura que todo Analytics Engineer precisa dominar:
+
+1. **O Erro 404:** Como a pasta `/blog/` não existia fisicamente no servidor do GitHub Pages, fomos redirecionados para a página de erro 404 padrão do GitHub. Por ser uma página automática do servidor, ela **não possui o snippet do GTM instalado**. Resultado: O Tag Assistant perdeu a conexão imediatamente. A lição clara foi que o GTM só consegue ler e disparar dados em páginas onde seu código-fonte base está fisicamente injetado.
+2. **URL Encoding (Codificação de URL):** Ao tentarmos contornar o Erro 404 adicionando um parâmetro falso de busca na URL principal (ex: `?teste=/blog/`), observamos pela variável `Page URL` que o GTM leu o valor como `%2Fblog%2F`. Isso acontece porque navegadores codificam caracteres especiais (como a barra `/`, que vira `%2F`) quando inseridos como parâmetros. Esse detalhe provou que expressões regulares literais podem falhar se não considerarmos a transformação nativa dos dados no navegador.
+
+> **Imagem de Referência: A captura do URL Encoding na variável Page URL**
+> ![Comportamento do URL Encoding no Tag Assistant](./Dia18_02-tag-assistant-url-encoding.png)
+
+## Conclusão e Impacto de Negócio
+
+Dominar Expressões Regulares liberta a arquitetura de dados da dependência de URLs exatas. A capacidade de usar padrões matemáticos de texto garante que as configurações de tagueamento permaneçam perfeitamente ativas e escaláveis, mesmo quando o site cresce, URLs mudam de formato ou novas campanhas de marketing anexam dezenas de parâmetros dinâmicos (UTMs) aos links.
