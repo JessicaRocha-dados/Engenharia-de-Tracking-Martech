@@ -212,7 +212,7 @@ Após atualizar o ambiente de Preview e reexecutar o push, inspecionamos o event
 
 ---
 
-## 🎯 Conclusão e Impacto de Negócio
+##  Conclusão e Impacto de Negócio
 
 A união do **Acionador Customizado** com a **Variável Aninhada** cria a fundação para o rastreamento avançado de conversões.
 
