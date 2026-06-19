@@ -272,3 +272,45 @@ Durante os testes práticos de simulação da pasta (`/blog/`), esbarramos em do
 ## Conclusão e Impacto de Negócio
 
 Dominar Expressões Regulares liberta a arquitetura de dados da dependência de URLs exatas. A capacidade de usar padrões matemáticos de texto garante que as configurações de tagueamento permaneçam perfeitamente ativas e escaláveis, mesmo quando o site cresce, URLs mudam de formato ou novas campanhas de marketing anexam dezenas de parâmetros dinâmicos (UTMs) aos links.
+
+---
+
+# Dia 19: Tabelas de Consulta (Lookup Tables)
+
+Neste dia, evoluímos a arquitetura de dados do laboratório para torná-la escalável e inteligente, substituindo a criação manual e repetitiva de Tags por regras de roteamento dinâmico.
+
+---
+
+## Teoria: O Fim do Trabalho Repetitivo
+
+Em cenários complexos (como e-commerces com dezenas de categorias ou sites com múltiplos parceiros de negócios), é comum a necessidade de disparar IDs de rastreamento diferentes dependendo da página acessada. 
+
+O método consiste em criar uma Tag e um Acionador separados para cada página. O método de Engenharia de Analytics utiliza **Tabelas de Consulta (Lookup Tables)**. 
+
+Uma Tabela de Consulta é uma variável condicional (If/Else). Ela observa uma variável de entrada (como a URL da página) e, com base em regras predefinidas, entrega um valor de saída específico (como o ID de um Pixel). Isso permite usar apenas **1 Acionador** e **1 Tag**, enquanto o GTM injeta o ID correto dinamicamente.
+
+
+## Prática: Roteamento de Pixel do Meta Ads
+
+Criamos uma variável inteligente para simular a troca de IDs de um Pixel do Meta (Facebook) com base na rota de navegação do usuário.
+
+### Configuração da Variável (`Lookup - ID do Pixel do Meta`):
+*   **Tipo:** Tabela de consulta (Lookup Table)
+*   **Variável de entrada:** `{{Page Path}}`
+
+**Mapeamento de Regras:**
+1.  **Se a URL for:** `/projeto-tracking/` -> **Entregue:** `111111111111111`
+2.  **Se a URL for:** `/projeto-tracking/blog/` -> **Entregue:** `222222222222222`
+3.  **Se a URL for:** `/projeto-tracking/contato/` -> **Entregue:** `333333333333333`
+*   **Valor Padrão (Fallback de segurança):** `000000000000000` (Garante que a Tag não quebre se o usuário acessar uma URL não mapeada).
+
+
+##  Validando a Injeção de Dados
+
+Para validar a estrutura, acessamos a rota inicial do projeto (`/projeto-tracking/`) e inspecionamos o comportamento das variáveis no Tag Assistant durante o evento de carregamento do contêiner.
+
+> **Imagem de Referência: A Variável assumindo o valor dinâmico com base na URL.**
+> ![Validação da Tabela de Consulta no Tag Assistant](./Dia19_01-lookup-table-validacao.png)
+
+Como evidenciado na captura, a variável leu a rota atual e assumiu instantaneamente o valor mapeado na Linha 1 da nossa regra condicional, pronta para ser injetada em qualquer Tag de marketing que solicite esse ID.
+
