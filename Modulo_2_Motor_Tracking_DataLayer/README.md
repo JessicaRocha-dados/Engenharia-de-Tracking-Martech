@@ -314,3 +314,55 @@ Para validar a estrutura, acessamos a rota inicial do projeto (`/projeto-trackin
 
 Como evidenciado na captura, a variável leu a rota atual e assumiu instantaneamente o valor mapeado na Linha 1 da nossa regra condicional, pronta para ser injetada em qualquer Tag de marketing que solicite esse ID.
 
+---
+# Dia 20: HTML Personalizado, Cookies e Lógica Condicional
+
+Neste marco do laboratório, transacionamos da leitura passiva de dados para a **intervenção ativa no navegador do usuário**. Utilizamos a Tag de HTML Personalizado do GTM não apenas para gravar Cookies, mas para injetar uma inteligência de roteamento de eventos (If/Else) baseada no histórico de navegação.
+
+
+## Teoria: HTML Personalizado
+
+A Tag de HTML Personalizado permite a execução de JavaScript puro dentro do ecossistema do site, superando as limitações das tags nativas. No mercado avançado de Web Analytics, seus principais casos de uso incluem:
+
+1.  **Modificações de DOM:** Injeção de banners ou pop-ups sem depender do time de TI.
+2.  **Integrações via Webhooks/APIs:** Envio de requisições (`fetch()`) para bancos de dados externos.
+3.  **Observadores de Mutação (Mutation Observers):** Criação de escutadores para rastrear mensagens de sucesso dinâmicas que não recarregam a página.
+4.  **Gerenciamento de Estado (Cookies/Local Storage):** Gravação de dados no navegador para criar memórias de longo prazo sobre o comportamento do usuário.
+
+
+##  Prática: Script de Identificação de Retenção (Novo vs. Retornante)
+
+Foi desenvolvido no VS Code um script autoexecutável (IIFE) focado em avaliar o status de retenção do usuário na página do projeto.
+
+### Lógica Arquitetural do Script:
+
+1.  **Leitura do Ambiente:** A função `getCookie()` varre o armazenamento do navegador em busca de um cookie específico chamado `status_visitante_lab`.
+2.  **Decisão (If/Else):**
+    * **Se o Cookie NÃO existir (Cenário A):** O script grava o cookie (com 30 dias de expiração), emite um aviso no Console e envia o evento `usuario_novo_detectado` para a Camada de Dados.
+    * **Se o Cookie JÁ existir (Cenário B):** O script reconhece o usuário, emite um aviso de boas-vindas no Console e envia o evento `usuario_retornante_detectado` para a Camada de Dados.
+
+O código-fonte (`cookie_acesso.html`) foi adicionado à raiz do repositório, garantindo versionamento seguro, e posteriormente injetado no GTM através de uma Tag do tipo **HTML Personalizado** com o Acionador de Exibição de Página.
+
+
+##  Validando a Memória do Navegador
+
+Foi realizado um teste de fluxo completo, do primeiro acesso ao recarregamento da página, para atestar o funcionamento da lógica de if/else e da ponte com a Camada de Dados.
+
+### 1. A Evidência Física da Gravação
+Através das ferramentas de desenvolvedor (F12 > Aba *Application*), validamos que o JavaScript do GTM conseguiu furar o bloqueio padrão e gravar fisicamente o nosso arquivo de texto na máquina do usuário.
+
+> **Imagem de Referência: Cookie `status_visitante_lab` alocado com sucesso.**
+> ![Visualização do Cookie na aba Application do navegador](./Dia20_01-cookie-gravado-application.png)
+
+### 2. O Roteamento de Data Layer
+Ao abrir o Tag Assistant no primeiro carregamento (Cenário A), constatamos que a estrutura condicional funcionou. O script disparou com sucesso o evento focado na aquisição do usuário.
+
+> **Imagem de Referência: Evento de Novo Usuário na linha do tempo.**
+> ![Evento usuario_novo_detectado no GTM](./Dia20_02-evento-novo-visitante.png)
+
+Em seguida, recarregamos a página (F5) para simular um acesso no dia seguinte (Cenário B). A inteligência do script identificou a existência do cookie gravado no passo anterior e ramificou o código para enviar um evento diferente, abrindo portas para configurações avançadas de públicos de Remarketing nas plataformas de Ads.
+
+> **Imagem de Referência: Evento de Retenção na linha do tempo após F5.**
+> ![Evento usuario_retornante_detectado no GTM](./Dia20_03-evento-retornante.png)
+
+---
