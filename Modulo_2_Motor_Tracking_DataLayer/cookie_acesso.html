@@ -1,0 +1,58 @@
+<script>
+  // Usamos uma função anônima autoexecutável (IIFE) para isolar nosso código 
+  // e não dar conflito com outros scripts do site.
+  (function() {
+    
+    // 1. Função auxiliar que "vasculha" o navegador para ler um cookie específico
+    function getCookie(nome) {
+      var nomeIgual = nome + "=";
+      var arrayCookies = document.cookie.split(';');
+      for(var i = 0; i < arrayCookies.length; i++) {
+        var c = arrayCookies[i].trim();
+        if (c.indexOf(nomeIgual) === 0) {
+          return c.substring(nomeIgual.length, c.length);
+        }
+      }
+      return ""; // Retorna vazio se o cookie não existir
+    }
+
+    // 2. Definimos o nome da nossa "marcação" e tentamos ler o navegador
+    var nomeDoCookie = "status_visitante_lab";
+    var valorDoCookie = getCookie(nomeDoCookie);
+
+    // 3. Garantimos que a Camada de Dados (Data Layer) está pronta para receber informações
+    window.dataLayer = window.dataLayer || [];
+
+    // 4. A DECISÃO LÓGICA (If/Else)
+    if (valorDoCookie === "") {
+      
+      // Cenário A: O cookie NÃO existe. É a primeira visita!
+      var dataExpiracao = new Date();
+      dataExpiracao.setTime(dataExpiracao.getTime() + (30 * 24 * 60 * 60 * 1000)); // Validade de 30 dias
+      
+      // Gravamos o cookie para marcar o usuário
+      document.cookie = nomeDoCookie + "=retornante;expires=" + dataExpiracao.toUTCString() + ";path=/";
+      
+      console.log(" GTM Script: Novo visitante! Cookie gravado com sucesso.");
+      
+      // Enviamos um evento poderoso para o GTM usar como gatilho
+      window.dataLayer.push({
+        'event': 'usuario_novo_detectado',
+        'perfil_visitante': 'novo_usuario'
+      });
+
+    } else {
+      
+      // Cenário B: O cookie JÁ existe. O usuário está voltando ao laboratório!
+      console.log(" GTM Script: Bem-vindo de volta! Visitante retornante detectado.");
+      
+      // Enviamos um evento diferente para o GTM
+      window.dataLayer.push({
+        'event': 'usuario_retornante_detectado',
+        'perfil_visitante': 'retornante'
+      });
+      
+    }
+    
+  })();
+</script>
