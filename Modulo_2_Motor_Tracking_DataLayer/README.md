@@ -396,8 +396,7 @@ Criamos um ouvinte focado em capturar o status de retenção do usuário que con
 > ![Configuração da Variável de Cookie Primário no GTM](./Dia21_02-configuracao-cookie-primario.png)
 
 
-
-## Debug 
+## Debug: Validação de Disparo
 
 Para validar a configuração, realizamos um teste focado na **ordem cronológica** de disparo do Tag Assistant. 
 
@@ -411,3 +410,48 @@ No entanto, ao simularmos um retorno ao site (recarregando a página), a variáv
 Como evidenciado na captura, no momento da Inicialização de Consentimento (Evento 7 da nova sessão), o GTM já possuía a informação de que o usuário era `"retornante"`, provando que a ponte de leitura entre o site e o contêiner está perfeitamente estabelecida.
 
 ---
+
+# Dia 22: Templates Personalizados da Comunidade (Meta Ads)
+
+Neste laboratório, elevamos o nível da nossa arquitetura de rastreamento substituindo a injeção manual de scripts por **Templates da Comunidade**. O foco foi a implementação da Tag Base (PageView) do Meta Ads utilizando o modelo homologado da **Stape**, uma das maiores referências em infraestrutura de rastreamento avançado.
+
+
+
+## Teoria: A Galeria de Templates
+
+A Galeria de Templates do GTM funciona como um repositório colaborativo seguro, onde desenvolvedores parceiros disponibilizam modelos prontos de integração. 
+
+As principais vantagens de utilizar templates ao invés da Tag de HTML Personalizado incluem:
+
+* **Segurança:** O código é executado em um ambiente encapsulado (sandbox) com permissões restritas pelo próprio Google.
+* **Manutenibilidade:** Interfaces limpas substituem blocos de código extensos e propensos a erros de digitação.
+* **Escalabilidade:** Atualizações da API das plataformas (como o Meta) são resolvidas com um simples clique para atualizar o template na galeria, sem necessidade de reescrever funções.
+
+
+
+##  Prática: Implementação do Facebook Pixel (by Stape)
+
+Utilizamos o template "Facebook Pixel" desenvolvido pela equipe da Stape.io para configurar a Tag principal de visualização de página.
+
+### Configuração Arquitetural:
+* **Tag Type:** Facebook Pixel by Stape.
+* **Pixel ID:** Utilizamos a nossa variável inteligente `{{Lookup - ID do Pixel do Meta}}` para garantir que o ID mude dinamicamente caso seja necessário criar lógicas de múltiplos ambientes no futuro.
+* **Event Name:** `PageView` (Evento padrão responsável por alimentar as métricas base do Gerenciador de Anúncios).
+* **Acionador:** `All Pages` (Garantindo a cobertura total do site).
+
+> **Imagem de Referência: Configuração da Tag com variável de Lookup e Evento PageView.**
+> ![Configuração Tag Base Meta Ads](./Dia22_01-tag-base-meta-stape.png)
+
+> **Imagem de Referência: Acionador Global para a Tag Base.**
+> ![Acionador All Pages](./Dia22_02-gatilho-tag-base.png)
+
+---
+
+## Debug: Validação de Disparo (QA)
+
+Como manda a boa prática da Engenharia de Analytics, nenhuma tag vai para produção sem a validação no ambiente de Debug. 
+
+Ao executar o Tag Assistant, confirmamos que a arquitetura funcionou perfeitamente: no momento em que o evento `Container Loaded` (Contêiner Carregado) ocorreu, a nossa Tag Base do Meta Ads foi disparada com sucesso, injetando o Pixel na página de forma assíncrona e segura através do template da Stape.
+
+> **Imagem de Referência: Tag Base do Meta Ads disparada no evento Container Loaded.**
+> ![Validação do Disparo da Tag Base](./Dia22_03-qa-disparo-tag-base.png)
