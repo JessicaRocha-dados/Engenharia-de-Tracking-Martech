@@ -366,3 +366,48 @@ Em seguida, recarregamos a página (F5) para simular um acesso no dia seguinte (
 > ![Evento usuario_retornante_detectado no GTM](./Dia20_03-evento-retornante.png)
 
 ---
+
+# Dia 21: Variáveis de Cookie Primário (1st Party Cookies)
+
+Neste laboratório, completamos o ciclo de persistência de dados. Após configurarmos o navegador para "escrever" dados (Dia 20), implementamos a arquitetura para que o GTM possa "ler" essas informações de forma nativa, contínua e escalável, sem a necessidade de manter funções JavaScript complexas (como `getCookie()`) rodando em loop.
+
+
+
+##  Teoria: Variáveis de Cookie Primário
+
+Em Engenharia de Analytics, sempre que possível, devemos substituir códigos customizados por soluções nativas para melhorar a performance da página e a manutenibilidade do contêiner.
+
+A variável de **Cookie Primário (1st Party Cookie)** do GTM serve exatamente para isso. Ela atua como uma "antena" passiva. Ao informarmos o nome exato de um cookie que pertence ao nosso próprio domínio, o GTM automaticamente vasculha o navegador do usuário no instante em que a página carrega e transforma o valor desse cookie em uma variável dinâmica. 
+
+Essa variável pode então ser injetada em qualquer Tag de marketing, permitindo, por exemplo, enviar parâmetros como `user_type: retornante` em todos os eventos do Google Analytics 4.
+
+
+
+## Prática: Lendo a Memória do Navegador
+
+Criamos um ouvinte focado em capturar o status de retenção do usuário que configuramos no laboratório anterior.
+
+### Configuração da Variável (`Cookie - Status do Visitante`):
+* **Tipo:** Cookie primário (1st Party Cookie)
+* **Nome do cookie:** `status_visitante_lab` (Exatamente o mesmo nome declarado no script de gravação).
+* **Decodificação URI:** Ativada (Boa prática para evitar quebras em valores com caracteres especiais).
+
+> **Imagem de Referência: Parametrização da Variável no GTM.**
+> ![Configuração da Variável de Cookie Primário no GTM](./Dia21_02-configuracao-cookie-primario.png)
+
+
+
+## Debug 
+
+Para validar a configuração, realizamos um teste focado na **ordem cronológica** de disparo do Tag Assistant. 
+
+Foi possível observar que em uma primeira visita com o navegador "limpo", a variável retornou `undefined` nos primeiros milissegundos, até que a Tag de HTML Personalizado disparasse e gravasse o arquivo. 
+
+No entanto, ao simularmos um retorno ao site (recarregando a página), a variável provou seu valor ao extrair o dado instantaneamente:
+
+> **Imagem de Referência: GTM lendo o cookie no instante inicial do carregamento.**
+> ![Validação da leitura do Cookie Primário no Tag Assistant](./Dia21_01-leitura-cookie-primario.png)
+
+Como evidenciado na captura, no momento da Inicialização de Consentimento (Evento 7 da nova sessão), o GTM já possuía a informação de que o usuário era `"retornante"`, provando que a ponte de leitura entre o site e o contêiner está perfeitamente estabelecida.
+
+---
