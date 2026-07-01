@@ -482,13 +482,12 @@ O tratamento de dados (como forçar textos para minúsculas) é essencial para m
 ##  Prática: Web Scraping e Tratamento de Strings
 
 Criamos um script focado em varrer o DOM (Document Object Model), localizar o título principal da página (`<h1>`), extrair o seu conteúdo de texto e forçá-lo para caracteres minúsculos utilizando o método nativo `.toLowerCase()`.
-
 **Configuração da Variável (`JS - Titulo H1 Minusculo`):**
 
 Adicionamos travas de segurança (`if`) para garantir que o script não retorne erros de console caso a página não possua a tag alvo.
 
-![Configuração da variável Custom JS no GTM](imagens/Dia23_01-configuracao-variavel-custom-js.png)
-*Imagem de Referência: Estruturação do Script na Variável.*
+> **Imagem de Referência: Estruturação do Script na Variável.**
+> ![Configuração da variável Custom JS no GTM](./Dia23_01-configuracao-variavel-custom-js.png)
 
 ---
 
@@ -498,7 +497,7 @@ O teste de disparo exigiu atenção à cronologia de carregamento do navegador.
 
 Como o nosso script depende de ler uma tag HTML física (`<h1>`), a variável retornaria indefinida se lida no primeiro milissegundo (`Consent Initialization`). O momento correto para a coleta desse tipo de dado é no evento **DOM Ready** (DOM Pronto), momento em que a estrutura visual da página já foi desenhada pelo navegador.
 
-![QA da variável Custom JS no painel de Debug do GTM](imagens/Dia23_02-qa-variavel-custom-js.png)
-*Imagem de Referência: GTM capturando e transformando o texto no evento DOM Ready.*
+> **Imagem de Referência: GTM capturando e transformando o texto no evento DOM Ready.**
+> ![QA da variável Custom JS no painel de Debug do GTM](./Dia23_02-qa-variavel-custom-js.png)
 
 Como demonstrado no painel de Debug, a variável interceptou o título e o devolveu perfeitamente formatado como `"bem-vinda ao meu site de testes de analytics!"`, pronto para ser acoplado a qualquer Tag de rastreamento.
