@@ -501,3 +501,12 @@ Como o nosso script depende de ler uma tag HTML física (`<h1>`), a variável re
 > ![QA da variável Custom JS no painel de Debug do GTM](./Dia23_02-qa-variavel-custom-js.png)
 
 Como demonstrado no painel de Debug, a variável interceptou o título e o devolveu perfeitamente formatado como `"bem-vinda ao meu site de testes de analytics!"`, pronto para ser acoplado a qualquer Tag de rastreamento.
+
+---
+---
+
+## 🚀 Dias 24 a 28: Projeto Final do Módulo 2
+Para encerrar este módulo com foco em arquitetura de dados e Analytics Engineering, desenvolvemos um Case Study completo refatorando o rastreamento de um formulário de captação. 
+
+👉 **[Clique aqui para acessar a documentação completa do Projeto Final](./Projeto_Final_Tracking_Formulario/README.md)**
+
