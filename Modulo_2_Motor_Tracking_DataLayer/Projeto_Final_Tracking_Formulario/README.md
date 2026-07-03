@@ -1,7 +1,7 @@
 #  Case Study: Refatoração de Tracking de Formulário
 
 ## 📌 Visão Geral do Projeto
-Este projeto documenta a evolução da arquitetura de rastreamento de um formulário de captação de leads. O objetivo foi migrar de um acionador genérico (`Form Submission`), altamente propenso a disparos falsos, para uma estrutura robusta baseada em **Data Layer Push**. 
+Este projeto documenta a evolução da arquitetura de rastreamento de um formulário de captação de leads. O objetivo foi migrar de um acionador genérico (`Form Submission`), altamente propenso a disparos falsos, para uma estrutura robusta baseada em **Data Layer Push**.
 
 Como o site utiliza formulários **AJAX** (sem recarregamento de página), a injeção do evento via Camada de Dados garante que o GTM e as plataformas de mídia (GA4 e Meta Ads) só registrem a conversão após a validação real do envio, eliminando a sujeira de dados na origem e garantindo a integridade dos relatórios de performance.
 
@@ -17,7 +17,7 @@ Como o site utiliza formulários **AJAX** (sem recarregamento de página), a inj
 
 ---
 
-## Etapa 1: Planejamento Arquitetural e Dicionário de Dados
+##  Etapa 1: Planejamento Arquitetural e Dicionário de Dados
 
 A primeira decisão técnica foi abandonar abordagens passivas (como Visibilidade do Elemento) e atuar diretamente no código-fonte do site. Foi injetado um script na função de sucesso do formulário para empurrar um pacote de dados limpo para o GTM.
 
@@ -31,13 +31,10 @@ window.dataLayer.push({
     'form_name': 'newsletter_home',   // Identificador de contexto do lead
     'lead_status': 'qualificado'      // Regra de negócio aplicada via código
 });
+```
 
----
+### 📸 Evidência Visual: Disparo do Data Layer Push
 
-## 📂 Documentação Visual
+![Tag Assistant capturando o evento lead_gerado na Camada de Dados](./Dia24_01-datalayer-push-lead.png)
 
-**Evidência 1: Disparo do Data Layer Push no momento da conversão**
-Abaixo, o painel de Debug do GTM comprova a injeção do evento `lead_gerado` e do payload de contexto (`form_name` e `lead_status`) perfeitamente estruturados na Camada de Dados, atestando o sucesso da nova arquitetura no código-fonte.
-
-![Validação do Data Layer Push no Tag Assistant](./Dia24_01-datalayer-push-lead.png)
-*Imagem: Tag Assistant capturando o evento estruturado via AJAX.*
+Acima, o painel de Debug do GTM comprova a injeção do evento `lead_gerado` e do payload de contexto (`form_name` e `lead_status`) perfeitamente estruturados na Camada de Dados, atestando o sucesso da nova arquitetura no código-fonte.
