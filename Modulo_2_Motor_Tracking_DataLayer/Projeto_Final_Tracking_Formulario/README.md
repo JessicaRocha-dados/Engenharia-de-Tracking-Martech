@@ -130,5 +130,5 @@ A validação final consistiu em garantir que o GTM realizou o roteamento corret
 
 ---
 
-**Conclusão:**
+### **Conclusão:**
 A arquitetura de tracking implementada neste projeto substitui soluções frágeis  baseadas em cliques genéricos ou visibilidade de elementos que quebram facilmente com mudanças de layout  por um modelo orientado a eventos de engenharia. O resultado é um pipeline de captura de dados 100% à prova de falsos positivos, altamente escalável e alinhado às melhores práticas de governança de dados.
