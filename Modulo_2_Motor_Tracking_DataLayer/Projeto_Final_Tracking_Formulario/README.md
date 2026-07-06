@@ -10,7 +10,7 @@ Como o site utiliza formulários **AJAX** (sem recarregamento de página), a inj
 ##  Etapas de Execução
 
 - [x] **Etapa 1:** Planejamento Arquitetural (Dia 24)
-- [ ] **Etapa 2:** Configuração do Gatilho Avançado (Dia 25)
+- [x] **Etapa 2:** Configuração do Gatilho Avançado (Dia 25)
 - [ ] **Etapa 3:** Enriquecimento de Dados com Variáveis (Dia 26)
 - [ ] **Etapa 4:** Configuração das Tags de Conversão (Dia 27)
 - [ ] **Etapa 5:** QA, Validação de Disparo e Conclusão (Dia 28)
@@ -38,3 +38,24 @@ window.dataLayer.push({
 ![Tag Assistant capturando o evento lead_gerado na Camada de Dados](./Dia24_01-datalayer-push-lead.png)
 
 Acima, o painel de Debug do GTM comprova a injeção do evento `lead_gerado` e do payload de contexto (`form_name` e `lead_status`) perfeitamente estruturados na Camada de Dados, atestando o sucesso da nova arquitetura no código-fonte.
+
+----
+##  Etapa 2: Configuração do Gatilho Avançado (Acionador)
+
+Para capturar o disparo executado pelo código-fonte, foi implementado um mecanismo de escuta no Google Tag Manager. Substituímos o gatilho nativo de submissão de formulários pela criação de um Acionador de Evento Personalizado (Custom Event Trigger), configurado explicitamente para intercetar o evento declarado na Camada de Dados.
+
+**Detalhes do Acionador:**
+* **Tipo:** Evento Personalizado (Custom Event)
+* **Nome do Evento:** `lead_gerado`
+* **Condição de Disparo:** Todos os eventos personalizados
+
+Essa configuração garante **zero falsos positivos**. O GTM e as tags de mídia (como o Meta Ads) só serão ativados quando o site confirmar ativamente que o processo do formulário AJAX foi concluído com êxito.
+
+**📸 Evidência Visual: Acionador Customizado no GTM (Etapa 2)**
+
+Abaixo, a configuração do Acionador de Evento Personalizado no Google Tag Manager. Ele foi criado para interceptar exatamente o evento `lead_gerado` disparado pelo nosso código AJAX, servindo como o gatilho principal para as tags de conversão.
+
+![Configuração do Acionador de Evento Personalizado no GTM](./Dia25_01-acionador-customizado.png)
+*Imagem: GTM configurado para escutar o Data Layer Push.*
+
+---
