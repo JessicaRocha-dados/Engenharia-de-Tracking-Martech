@@ -1,4 +1,4 @@
-#  Case Study: Refatoração de Tracking de Formulário
+#  Refatoração de Tracking de Formulário
 
 ## 📌 Visão Geral do Projeto
 Este projeto documenta a evolução da arquitetura de rastreamento de um formulário de captação de leads. O objetivo foi migrar de um acionador genérico (`Form Submission`), altamente propenso a disparos falsos, para uma estrutura robusta baseada em **Data Layer Push**.
@@ -11,7 +11,7 @@ Como o site utiliza formulários **AJAX** (sem recarregamento de página), a inj
 
 - [x] **Etapa 1:** Planejamento Arquitetural (Dia 24)
 - [x] **Etapa 2:** Configuração do Gatilho Avançado (Dia 25)
-- [ ] **Etapa 3:** Enriquecimento de Dados com Variáveis (Dia 26)
+- [x] **Etapa 3:** Enriquecimento de Dados com Variáveis (Dia 26)
 - [ ] **Etapa 4:** Configuração das Tags de Conversão (Dia 27)
 - [ ] **Etapa 5:** QA, Validação de Disparo e Conclusão (Dia 28)
 
@@ -57,5 +57,26 @@ Abaixo, a configuração do Acionador de Evento Personalizado no Google Tag Mana
 
 ![Configuração do Acionador de Evento Personalizado no GTM](./Dia25_01-acionador-customizado.png)
 *Imagem: GTM configurado para escutar o Data Layer Push.*
+
+---
+##  Etapa 3: Enriquecimento de Dados com Variáveis
+
+Para que o contexto de negócio (payload) injetado no Data Layer pudesse ser repassado para as plataformas de mídia, foi necessário mapear esses atributos dentro do Google Tag Manager utilizando **Variáveis da Camada de Dados (Data Layer Variables)**.
+
+**Variáveis Mapeadas:**
+1. **`dlv - form_name`**: Captura a chave `form_name`. Permite identificar exatamente a origem do lead (ex: `newsletter_home`), viabilizando a análise de performance por posicionamento na página.
+2. **`dlv - lead_status`**: Captura a chave `lead_status`. Insere uma regra de qualificação primária (ex: `qualificado`), essencial para a segmentação de públicos de remarketing e modelagem de lookalike no Meta Ads.
+
+Esta etapa transforma um disparo binário (converteu ou não) numa coleta rica e contextualizada, base fundamental para projetos avançados em Martech.
+
+**📸 Evidência Visual: Variáveis da Camada de Dados (Etapa 3)**
+
+Abaixo, o mapeamento das chaves de negócio transformadas em variáveis no GTM. Elas são as responsáveis por extrair o contexto gerado pelo código (`form_name` e `lead_status`) para enriquecer o payload enviado às plataformas de mídia.
+
+![Configuração da Variável lead_status](./Dia26_01-variavel-dlv-lead-status.png)
+*Imagem: Variável Data Layer para captura do status do lead.*
+
+![Configuração da Variável form_name](./Dia26_02-variavel-dlv-form-name.png)
+*Imagem: Variável Data Layer para captura do nome do formulário.*
 
 ---
