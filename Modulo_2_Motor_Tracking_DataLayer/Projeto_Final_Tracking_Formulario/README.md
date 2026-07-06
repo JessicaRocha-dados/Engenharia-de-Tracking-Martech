@@ -13,7 +13,7 @@ Como o site utiliza formulários **AJAX** (sem recarregamento de página), a inj
 - [x] **Etapa 2:** Configuração do Gatilho Avançado (Dia 25)
 - [x] **Etapa 3:** Enriquecimento de Dados com Variáveis (Dia 26)
 - [x] **Etapa 4:** Configuração das Tags de Conversão (Dia 27)
-- [ ] **Etapa 5:** QA, Validação de Disparo e Conclusão (Dia 28)
+- [x] **Etapa 5:** QA, Validação de Disparo e Conclusão (Dia 28)
 
 ---
 
@@ -101,3 +101,34 @@ Abaixo, a consolidação da nossa arquitetura. A tag do GA4 estruturada para dis
 *Imagem: Tag do GA4 integrada com Variáveis de Camada de Dados e Acionador Personalizado.*
 
 ---
+
+##  Etapa 5: Quality Assurance (QA) e Validação da Arquitetura
+
+Em projetos de Engenharia de Analytics e Martech, a confiança nos dados é o pilar central. Por isso, a última etapa deste laboratório consistiu em um rigoroso processo de **Quality Assurance (QA)** utilizando o modo de Depuração (Debug Mode / Tag Assistant) do Google Tag Manager. 
+
+O objetivo principal foi comprovar, na prática, a tese que norteou todo o projeto: **eliminar a coleta de falsos positivos gerados por formulários assíncronos (AJAX)** e garantir que as ferramentas de destino recebam um payload enriquecido com contexto de negócio.
+
+Para atestar a resiliência da arquitetura, auditei as três fases críticas do ciclo de vida do evento, consolidando as evidências abaixo:
+
+### 1. Interação do Usuário e Resposta do Front-end
+O primeiro teste garantiu que cliques acidentais ou tentativas inválidas no botão não disparassem a coleta de dados. A lógica implementada exigiu que o envio do sinal só acontecesse após o processamento bem-sucedido da requisição.
+
+![Envio Bem-Sucedido no Site](./Dia28_01-qa-site-sucesso.png)
+*Imagem 1: Interface validando o sucesso do envio enquanto o Tag Assistant monitora a sessão.*
+
+### 2. Inspeção da Camada de Dados 
+Na segunda fase, inspecionei o fluxo do "Data Layer" no Tag Assistant. A auditoria confirmou que a chamada da API `dataLayer.push()` foi interceptada perfeitamente na linha do tempo (Evento: `lead_gerado`). Mais importante ainda, atestou-se a integridade do payload: o código injetou com precisão as variáveis personalizadas, como a origem da conversão (`form_name: "newsletter_home"`) e a qualificação estratégica do contato (`lead_status: "qualificado"`).
+
+![Validação da Camada de Dados no Debug](./Dia28_02-qa-debug-datalayer.png)
+*Imagem 2: O objeto Data Layer estruturado e recebendo o contexto do lead injetado pelo código-fonte.*
+
+### 3. Roteamento de Dados e Acionamento 
+A validação final consistiu em garantir que o GTM realizou o roteamento correto da informação. O gatilho de Evento Personalizado operou com exatidão, acionando a Tag do Google Analytics 4 (GA4) sem duplicidades. A tag consumiu as variáveis da camada de dados para enriquecer o evento padrão `generate_lead` antes de enviá-lo ao servidor de métricas.
+
+![Confirmação do Disparo da Tag](./Dia28_03-qa-debug-tags-fired.png)
+*Imagem 3: Tag do GA4 acionada com sucesso ("Fired") no ambiente de Debug, fechando o pipeline de dados.*
+
+---
+
+** Conclusão **
+A arquitetura de tracking implementada neste projeto substitui soluções frágeis  baseadas em cliques genéricos ou visibilidade de elementos que quebram facilmente com mudanças de layout  por um modelo orientado a eventos de engenharia. O resultado é um pipeline de captura de dados 100% à prova de falsos positivos, altamente escalável e alinhado às melhores práticas de governança de dados.
