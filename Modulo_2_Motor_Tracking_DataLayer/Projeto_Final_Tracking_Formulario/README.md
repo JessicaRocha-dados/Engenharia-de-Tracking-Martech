@@ -12,7 +12,7 @@ Como o site utiliza formulários **AJAX** (sem recarregamento de página), a inj
 - [x] **Etapa 1:** Planejamento Arquitetural (Dia 24)
 - [x] **Etapa 2:** Configuração do Gatilho Avançado (Dia 25)
 - [x] **Etapa 3:** Enriquecimento de Dados com Variáveis (Dia 26)
-- [ ] **Etapa 4:** Configuração das Tags de Conversão (Dia 27)
+- [x] **Etapa 4:** Configuração das Tags de Conversão (Dia 27)
 - [ ] **Etapa 5:** QA, Validação de Disparo e Conclusão (Dia 28)
 
 ---
@@ -78,5 +78,26 @@ Abaixo, o mapeamento das chaves de negócio transformadas em variáveis no GTM. 
 
 ![Configuração da Variável form_name](./Dia26_02-variavel-dlv-form-name.png)
 *Imagem: Variável Data Layer para captura do nome do formulário.*
+
+---
+## Etapa 4: Configuração das Tags de Conversão
+
+Com a infraestrutura de captura (Acionador) e contexto (Variáveis) finalizada, o passo seguinte foi estruturar as Tags de envio para as plataformas de destino. Utilizamos o **Google Analytics 4 (GA4)** como referência para demonstrar o roteamento dos dados.
+
+**Estrutura da Tag de Evento (GA4):**
+* **Nome do Evento:** `generate_lead` (Nomenclatura recomendada nativamente pelo Google para otimização de machine learning em campanhas).
+* **Parâmetros de Evento Adicionados:**
+  * `form_name` mapeado dinamicamente recebendo a variável `{{dlv - form_name}}`.
+  * `lead_status` mapeado dinamicamente recebendo a variável `{{dlv - lead_status}}`.
+* **Acionamento:** Vinculada estritamente ao gatilho `Evento Personalizado - lead_gerado`.
+
+Esta etapa consolida o pipeline de dados: o site emite o sinal estruturado, o GTM o intercepta, enriquece com as variáveis de negócio e despacha a conversão com contexto rico para os servidores do Google.
+
+**📸 Evidência Visual: Configuração da Tag de Conversão **
+
+Abaixo, a consolidação da nossa arquitetura. A tag do GA4 estruturada para disparar no momento exato definido pelo gatilho personalizado, carregando consigo os parâmetros de negócio extraídos diretamente do código-fonte do site.
+
+![Configuração da Tag de Conversão do GA4](./Dia27_01-tag-ga4-generate-lead.png)
+*Imagem: Tag do GA4 integrada com Variáveis de Camada de Dados e Acionador Personalizado.*
 
 ---
