@@ -12,7 +12,7 @@ A transição de métricas de engajamento (leads) para métricas de receita (ven
 Para iniciar a arquitetura de tracking de e-commerce, atuei simulando o comportamento do código fonte do site (Front-end). 
 Realizei a **injeção manual de um payload via console do navegador** para disparar o evento `view_item` (visualização de produto). O objetivo técnico foi auditar se o contêiner do GTM estava apto a interceptar e estruturar cargas complexas de dados transacionais antes de configurarmos o roteamento para o Analytics.
 
-### 🏗️ A Arquitetura do Dado Transacional
+###  A Arquitetura do Dado Transacional
 O código injetado seguiu estritamente as regras de taxonomia do Google:
 * **Objeto Raiz:** A chave `ecommerce` encapsulando toda a transação (indispensável para relatórios de monetização).
 * **Métricas Financeiras:** Parâmetros de `currency` (moeda) e `value` (valor total).
