@@ -32,3 +32,31 @@ A documentação abaixo atesta o ciclo completo do dado: do disparo na interface
 *Imagem 2: Reação (GTM) - Tag Assistant confirmando a captura e estruturação exata do objeto ecommerce e do array de produtos.*
 
 ---
+
+
+## Dia 30: O Funil de Conversão e Evento de Compra (`purchase`)
+
+Enquanto eventos de topo de funil sinalizam intenção, o evento `purchase` é o marco definitivo de conversão em qualquer ecossistema de e-commerce. É ele o responsável por alimentar as métricas de Receita, ROI e ROAS nas plataformas de análise de dados e painéis de mídia paga.
+
+###  O Raciocínio Analítico e Desafio Técnico
+O objetivo desta etapa foi estruturar a arquitetura de captação transacional no Google Tag Manager (GTM). O desafio técnico consistia em garantir que o GTM interceptasse as variáveis complexas de e-commerce (como ID do pedido, valor total, moeda e o array do catálogo de produtos) no momento exato da validação da compra, repassando-as de forma íntegra para o Google Analytics 4.
+
+### Arquitetura da Solução: Automação via Data Layer
+Para criar um fluxo escalável e alinhado às melhores práticas de engenharia de tracking, optei por não mapear variáveis transacionais uma a uma. Em vez disso, utilizei a funcionalidade nativa do GA4 de **leitura direta do Data Layer**.
+
+![Configuração do Acionador Purchase](./Dia30_01-acionador-purchase.png)
+*Imagem 1: A Causa - Criação do Acionador (Gatilho) do tipo Evento Personalizado, configurado estritamente para interceptar a chave `purchase` injetada pelo Front-end na conclusão do checkout.*
+
+![Configuração da Tag GA4 - Purchase](./Dia30_02-tag-ga4-purchase.png)
+*Imagem 2: A Configuração - Tag de Evento do GA4 vinculada ao acionador. Destaque para a configuração avançada ativando a leitura nativa de E-commerce, permitindo que a tag extraia o objeto transacional inteiro direto da fonte de dados.*
+
+###  Garantia de Qualidade (QA) e Homologação
+Nunca assumimos que uma tag funciona sem a devida prova técnica. Para certificar a integridade do fluxo de dados, simulei o comportamento do site injetando um payload transacional completo via console do navegador. A auditoria no modo de depuração (Tag Assistant) comprovou o sucesso da arquitetura.
+
+![Validação do Disparo da Tag Purchase](./Dia30_03-tag-purchase-disparada.png)
+*Imagem 3: O Efeito - Teste em ambiente de homologação comprovando a interceptação do evento `purchase` (passo 9) e o acionamento bem-sucedido da Tag de conversão correspondente.*
+
+![Validação das Variáveis de Contexto](./Dia30_04-tag-purchase-variaveis.png)
+*Imagem 4: O Contexto - Inspeção da aba de variáveis em tempo de execução, atestando que o ecossistema do GTM mapeou com perfeição os parâmetros no momento exato do disparo.*
+
+---
