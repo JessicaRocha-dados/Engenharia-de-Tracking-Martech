@@ -60,3 +60,40 @@ Nunca assumimos que uma tag funciona sem a devida prova técnica. Para certifica
 *Imagem 4: O Contexto - Inspeção da aba de variáveis em tempo de execução, atestando que o ecossistema do GTM mapeou com perfeição os parâmetros no momento exato do disparo.*
 
 ---
+
+##  Dia 31: Enriquecimento de Dados com Dimensões Personalizadas
+
+Para elevar a maturidade da nossa coleta de dados além das métricas padrão (pageviews, cliques), implementamos o rastreamento de **Dimensões Personalizadas**. O objetivo estratégico desta etapa foi injetar variáveis de contexto de negócio (ex: status da assinatura do usuário) diretamente na camada de dados (Data Layer), permitindo que o Google Analytics 4 cruze o comportamento de navegação com o perfil do cliente.
+
+###  Arquitetura da Solução e Raciocínio Técnico
+
+O fluxo de dados foi desenhado em três camadas: captação no front-end, roteamento no middleware (GTM) e armazenamento no destino final (GA4).
+
+#### 1. Roteamento: Mapeando o Front-end no GTM
+**O Raciocínio:** O dado de negócio (o plano do cliente) nasce no código do site via `dataLayer.push`. No entanto, o GTM é "cego" a esses dados até que criemos um receptor específico para escutá-los. 
+**A Execução:** Criamos uma Variável da Camada de Dados configurada para ler a chave exata inserida pelos desenvolvedores (`plano_do_cliente`), traduzindo-a para uma variável interna utilizável pelo GTM.
+
+![Criação da Variável de Camada de Dados no GTM](./Dia31_01-variavel-gtm.png)
+*Imagem 1: Configuração da Variável `dlv - plano_do_cliente`, atuando como a ponte de extração entre o código HTML e o ecossistema do Tag Manager.*
+
+#### 2. Acoplamento: Injetando o Dado no Payload do GA4
+**O Raciocínio:** Ter o dado no GTM não significa que ele vai para o Analytics. Precisamos atrelar essa informação ao pacote de dados (payload) que é enviado aos servidores do Google. Ao adicionar esse parâmetro na Tag Base (Tag do Google/Configurações Compartilhadas), garantimos que **todos** os eventos subsequentes (pageviews, cliques, compras) já carreguem automaticamente o plano do cliente, mantendo o rastreamento holístico.
+**A Execução:** Vinculamos a variável criada ao parâmetro de evento técnico `plano_cliente` dentro das configurações da tag principal.
+
+![Injeção do Parâmetro na Tag do GA4](./Dia31_02-tag-ga4.png)
+*Imagem 2: Parâmetro `plano_cliente` adicionado à tag base, garantindo a herança dessa dimensão para todos os hits da sessão.*
+
+#### 3. Armazenamento: O Registro Oficial na Plataforma
+**O Raciocínio:** O GA4 recebe parâmetros personalizados nos bastidores para evitar sobrecarga0 no banco de dados. Para que o dado fique visível, processável e disponível para a criação de gráficos na interface, é imprescindível registrar formalmente essa chave.
+**A Execução:** Acessamos o painel de administração e criamos uma nova Definição Personalizada com escopo de Evento, casando o nome legível ("Plano do Cliente") com o parâmetro técnico configurado no GTM.
+
+![Registro da Dimensão Personalizada no GA4](./Dia31_03-registro-ga4.png)
+*Imagem 3: Registro de interface no GA4, etapa final para liberar o dado para relatórios e cruzamentos (Explorações).*
+
+###  Garantia de Qualidade (QA)
+A engenharia de dados exige validação. Simulamos o carregamento da página no ambiente de homologação para auditar o ciclo de vida da variável. O painel de depuração atestou que, no exato momento da "Inicialização" da página, o GTM capturou com sucesso a string de valor.
+
+![Auditoria no Tag Assistant](./Dia31_04-qa-variavel.png)
+*Imagem 4: QA (Quality Assurance) comprovando a extração perfeita do valor "Premium" pelo GTM antes mesmo do disparo de qualquer tag analítica.*
+
+---
