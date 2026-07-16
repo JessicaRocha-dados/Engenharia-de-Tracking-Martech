@@ -134,3 +134,37 @@ Ao isolar o comportamento do usuário "Premium" do tráfego geral `(not set)`, h
 A presença da linha **Premium** na tabela acima é a validação técnica final deste fluxo. O dado que nasceu como uma simples string de código no front-end foi transformado com sucesso em inteligência acionável e estruturada. O volume atribuído a **(not set)** reflete adequadamente a retroatividade dos dados e sessões sem disparo da variável de negócio, mantendo a integridade histórica do banco.
 
 ---
+
+##  Dia 33: Governança de Dados e Consent Mode V2
+
+A governança de dados tornou-se um pilar fundamental da engenharia de rastreamento. Com as diretrizes da LGPD (e legislações globais de privacidade), a coleta de dados de marketing e análise estatística exige o consentimento explícito, prévio e informado do usuário. Hoje, implementamos a base técnica para essa gestão através do **Google Consent Mode V2**.
+
+###  Contexto Teórico: O Papel da CMP e do Consent Mode
+O gerenciamento profissional de privacidade exige que o disparo de tags seja condicionado à escolha do usuário capturada por uma CMP (Consent Management Platform, como o Cookiebot). O **Consent Mode V2** atua como a ponte de comunicação nativa, permitindo que o Google Tag Manager (GTM) orquestre o comportamento das tags:
+*   **Consentimento negado:** As tags bloqueiam a escrita de cookies no navegador, mas o GA4 utiliza **Modelagem Comportamental (Machine Learning)** baseada em pings anônimos para estimar a volumetria de conversões perdidas, protegendo a inteligência de marketing.
+*   **Consentimento concedido:** O fluxo de rastreamento opera em sua totalidade.
+
+###  Implementação e Auditoria de Bloqueio (QA)
+Ativamos a "Visão Geral de Consentimento" no contêiner do GTM e construímos um cenário de testes rigoroso para validar a mecânica de governança na prática. 
+
+**Passo 1: Criação da Tag de Simulação**
+Criamos uma tag HTML personalizada simulando o disparo de um script de marketing padrão.
+
+![Criação da Tag de Teste](./Dia33_01-criacao-tag-teste.png)
+*Imagem 1: Configuração de uma tag genérica para validação de regras de privacidade.*
+
+**Passo 2: Aplicação da Regra de Consentimento**
+Inserimos nas configurações avançadas da tag a exigência estrita do parâmetro `ad_storage` (consentimento para armazenamento de publicidade).
+
+![Configuração de Consentimento](./Dia33_02-configuracao-consentimento.png)
+*Imagem 2: Tag atrelada à regra de governança, aguardando a liberação explícita do usuário.*
+
+**Passo 3: A Prova de Conceito (PoC)**
+Durante a depuração, simulamos o acesso de um usuário que ainda não aceitou os cookies.
+
+![Auditoria de Bloqueio por Falta de Consentimento](./Dia33_03-bloqueio-tag-assistant.png)
+*Imagem 3: O Tag Assistant atesta a eficácia da arquitetura. A tag foi interceptada e abortada de forma nativa pelo GTM, provando que o rastreamento respeita o estado atual de privacidade.*
+
+Esta etapa garante que a infraestrutura seja auditável e em total conformidade jurídica antes mesmo da integração com o banner final (CMP).
+
+---
