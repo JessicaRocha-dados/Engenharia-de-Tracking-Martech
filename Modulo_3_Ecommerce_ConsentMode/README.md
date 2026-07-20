@@ -135,7 +135,7 @@ A presença da linha **Premium** na tabela acima é a validação técnica final
 
 ---
 
-##  Dia 33: Governança de Dados e Consent Mode V2
+##  Dia 33: Governança de Dados e Consent Mode V2 (Teoria e Prática Avançada)
 
 A governança de dados tornou-se um pilar fundamental da engenharia de rastreamento. Com as diretrizes da LGPD (e legislações globais de privacidade), a coleta de dados de marketing e análise estatística exige o consentimento explícito, prévio e informado do usuário. Hoje, implementamos a base técnica para essa gestão através do **Google Consent Mode V2**.
 
@@ -144,7 +144,7 @@ O gerenciamento profissional de privacidade exige que o disparo de tags seja con
 *   **Consentimento negado:** As tags bloqueiam a escrita de cookies no navegador, mas o GA4 utiliza **Modelagem Comportamental (Machine Learning)** baseada em pings anônimos para estimar a volumetria de conversões perdidas, protegendo a inteligência de marketing.
 *   **Consentimento concedido:** O fluxo de rastreamento opera em sua totalidade.
 
-###  Implementação e Auditoria de Bloqueio (QA)
+### ⚙️ Implementação e Auditoria de Bloqueio (QA - Basic Mode)
 Ativamos a "Visão Geral de Consentimento" no contêiner do GTM e construímos um cenário de testes rigoroso para validar a mecânica de governança na prática. 
 
 **Passo 1: Criação da Tag de Simulação**
@@ -167,4 +167,20 @@ Durante a depuração, simulamos o acesso de um usuário que ainda não aceitou 
 
 Esta etapa garante que a infraestrutura seja auditável e em total conformidade jurídica antes mesmo da integração com o banner final (CMP).
 
+###  Evolução da Arquitetura: Basic vs. Advanced Consent Mode
+Na etapa anterior, validamos a interceptação de tags na interface do GTM, uma abordagem conservadora que se assemelha ao **Basic Consent Mode** (onde há o bloqueio total da tag em caso de recusa). Para elevar a maturidade da nossa engenharia de rastreamento e proteger a inteligência de negócios, implementamos agora o **Advanced Consent Mode**.
+
+**O que muda no fluxo de dados?**
+No modo avançado, as tags do Google não são totalmente bloqueadas, mas instruídas a operarem em um **estado restrito** quando o consentimento é negado:
+1. **Conformidade Jurídica (Artigo 12 da LGPD):** O sistema é estritamente proibido de gravar cookies ou capturar identificadores pessoais (como Client IDs ou IPs). 
+2. **Pings Anônimos:** As tags passam a enviar apenas sinais básicos, estatísticos e efêmeros (ex: "um clique ocorreu"), sem vincular a ação a um indivíduo.
+3. **Machine Learning:** Esses dados anonimizados alimentam a Modelagem Comportamental do GA4, permitindo que a ferramenta estime a volumetria de tráfego e conversões com alta precisão, sem ferir a privacidade do usuário.
+
+###  Prática: A Recusa de Cookies via Código-Fonte (Default Denied)
+Para que toda essa lógica avançada funcione, a aplicação precisa nascer bloqueada. Injetamos um script estrutural no `<head>` do código HTML, estrategicamente posicionado antes da inicialização do GTM. 
+
+Este código transmite a ordem primária: o estado padrão (`default`) para armazenamento de publicidade e estatísticas é categoricamente **recusado (`denied`)**.
+
+![Validação do Estado Restrito no Tag Assistant](./Dia33_04-estado-restrito-codigo.png)
+*Imagem 4: A auditoria de QA (Tag Assistant) comprova o sucesso da arquitetura. A coluna "Padrão na página" atesta que todos os privilégios de armazenamento (`ad_storage`, `analytics_storage`, `ad_user_data`, `ad_personalization`) carregam com o status restrito de fábrica (Negado). O ecossistema agora é seguro por padrão, aguardando a futura injeção da escolha explícita do usuário através da CMP.*
 ---
