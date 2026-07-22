@@ -184,3 +184,50 @@ Este código transmite a ordem primária: o estado padrão (`default`) para arma
 ![Validação do Estado Restrito no Tag Assistant](./Dia33_04-estado-restrito-codigo.png)
 *Imagem 4: A auditoria de QA (Tag Assistant) comprova o sucesso da arquitetura. A coluna "Padrão na página" atesta que todos os privilégios de armazenamento (`ad_storage`, `analytics_storage`, `ad_user_data`, `ad_personalization`) carregam com o status restrito de fábrica (Negado). O ecossistema agora é seguro por padrão, aguardando a futura injeção da escolha explícita do usuário através da CMP.*
 ---
+
+# Dia 34:  Análise Avançada de Comportamento e Retenção de Usuários no GA4
+
+focamos na extração de inteligência de negócios a partir de dados brutos de navegação utilizando o **Google Analytics 4 (GA4)**. O objetivo principal desta análise foi mapear o comportamento do tráfego, auditar a jornada do usuário e identificar gargalos de conversão através de técnicas avançadas de exploração de dados.
+
+##  Metodologia e Técnicas Aplicadas
+
+Foram construídas três visões analíticas fundamentais na aba de **Explorações** do GA4, partindo do zero até a visualização final dos dados:
+
+### 1. Sobreposição de Segmentos (Segment Overlap)
+A primeira etapa consistiu em isolar e comparar o comportamento do tráfego com base na tecnologia utilizada pelo usuário. 
+*   **Construção:** Foram criados dois segmentos personalizados condicionais na dimensão `Categoria do dispositivo`. O primeiro filtrando exclusivamente valores que correspondem a `mobile`, e o segundo focado em `desktop`.
+*   **Insight:** O diagrama de Venn gerado permite visualizar rapidamente a volumetria de usuários exclusivos de cada plataforma e a taxa de intersecção. Essa visão é crucial para direcionar verbas de mídia paga e priorizar testes de usabilidade (UX/UI) na plataforma com maior aderência.
+
+![Diagrama de Sobreposição de Dispositivos](guia1_sobreposicao_dispositivos.png)
+
+---
+
+### 2. Análise de Funil de Engajamento (Funnel Exploration)
+Para medir a retenção de atenção e encontrar pontos de fricção (drop-offs) na landing page, foi estruturado um funil comportamental fechado baseado no disparo de eventos nativos.
+*   **Estrutura do Funil:**
+    1.  **Acesso:** Disparo do evento `session_start` (início da sessão do usuário).
+    2.  **Leitura:** Disparo do evento `page_view` (carregamento completo e visualização da página).
+    3.  **Engajamento:** Disparo do evento `scroll` (usuário rolou a página consumindo o conteúdo).
+*   **Insight:** O gráfico de escada evidenciou uma taxa de abandono (drop-off rate) de 50% exatamente entre a fase de leitura e o engajamento profundo. Esse dado aponta de forma preditiva que, embora a página esteja carregando corretamente, o conteúdo inicial ou a promessa da dobra principal precisa ser otimizada para reter o usuário.
+
+![Gráfico de Funil de Engajamento](02_funil_engajamento.png)
+
+---
+
+### 3. Exploração de Caminho e Navegação (Path Exploration)
+Compreender para onde o usuário vai após o clique inicial é o que diferencia análises rasas de estratégias de alta performance. 
+*   **Construção:** Foi utilizada uma visualização em formato de árvore de decisão (nós ramificados), definindo o evento `session_start` como o ponto de partida (Root Node).
+*   **Insight:** A ramificação ilustra o fluxo exato de ações subsequentes, revelando como o tráfego se divide entre interagir com o formulário (`form_start`), consumir o conteúdo (`scroll`) ou ir direto para informações de contato no rodapé (`view_footer`). Isso fornece insumos qualitativos para reestruturar a arquitetura da informação do site.
+
+![Árvore de Fluxo de Navegação](03_fluxo_navegacao.png)
+
+---
+
+## Principais Aprendizados e Resolução de Problemas
+
+Além da construção dos gráficos, houve um domínio de habilidades cruciais para o dia a dia de operações de dados:
+
+*   **Troubleshooting de Interface (GA4):** Superação de falhas e bugs nativos da ferramenta (como quebras na barra de pesquisa de dimensões ao utilizar pontuações), contornando o problema através da navegação manual pelo catálogo estruturado de variáveis e painéis laterais ocultos.
+*   **Lógica de Filtragem de Dados:** Aplicação prática de operadores lógicos (AND/OR) para a construção de condições rigorosas e criação de segmentos que não "poluam" a amostra de dados.
+*   **Tradução de Eventos Técnicos em Visão de Negócios:** Capacidade de ler variáveis puramente técnicas (como parâmetros de *dataLayer*) e traduzi-las para as etapas reais do funil de vendas, gerando relatórios compreensíveis para stakeholders.
+
