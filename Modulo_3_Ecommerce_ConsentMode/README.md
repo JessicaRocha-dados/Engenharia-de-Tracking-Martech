@@ -231,3 +231,13 @@ Além da construção dos gráficos, houve um domínio de habilidades cruciais p
 *   **Lógica de Filtragem de Dados:** Aplicação prática de operadores lógicos (AND/OR) para a construção de condições rigorosas e criação de segmentos que não "poluam" a amostra de dados.
 *   **Tradução de Eventos Técnicos em Visão de Negócios:** Capacidade de ler variáveis puramente técnicas (como parâmetros de *dataLayer*) e traduzi-las para as etapas reais do funil de vendas, gerando relatórios compreensíveis para stakeholders.
 
+
+---
+
+## 🏆 Dias 35 a 37: Projeto Final (Dashboard Executivo)
+
+Finalizamos a engenharia de rastreamento no Dia 34! Os próximos passos da nossa jornada (Dias 35, 36 e 37) foram inteiramente dedicados à criação do nosso Projeto Final: a construção de um painel de inteligência de negócios no Looker Studio.
+
+Para ver o diário de bordo completo dessa etapa final, com a conexão de dados, estruturação visual e cruzamento de tráfego com conversões, acesse a pasta oficial do projeto abaixo:
+
+👉 **[Acessar o Projeto Final: Dashboard Executivo no Looker Studio](./Projeto_Final_Dashboard_Executivo)**
