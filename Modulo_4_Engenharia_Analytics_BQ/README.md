@@ -48,3 +48,29 @@ graph LR
     %% Estilo visual
     style sGTMTags fill:#1A4C6B,stroke:#fff,stroke-width:2px,color:#fff
 ```
+
+---
+
+##  Dia 39: Provisionamento de Server-Side Tracking (sGTM) 
+
+**A Teoria: Por que Server-Side?**
+
+O Server-Side Tracking (rastreamento do lado do servidor) muda a forma como coletamos e distribuímos dados. No modelo tradicional (Web), o navegador do usuário envia os eventos diretamente para as plataformas de mídia, o que frequentemente resulta em perda de dados devido a AdBlockers e restrições de navegadores (como o ITP da Apple). 
+
+Com a arquitetura Server-Side, o navegador envia os dados para o *nosso* próprio servidor em nuvem. A partir daí, é o nosso servidor que processa, enriquece e envia as informações para os destinos finais. O resultado prático é uma mensuração de performance muito mais precisa, maior controle sobre a privacidade dos dados e um carregamento de página mais leve.
+
+ **Implementação Prática: Deploy e Roteamento do Servidor**
+
+Para tirar essa arquitetura do papel utilizando uma infraestrutura de custo zero, executamos os seguintes passos:
+
+* Criação de um novo contêiner do tipo **Servidor** na conta do Google Tag Manager.
+* Execução do provisionamento manual para extração da *Container Configuration String*.
+* Deploy de um servidor na nuvem utilizando o **Stape.io** (hospedado na região US-West).
+* Conexão e roteamento final da *Tagging Server URL* gerada pelo Stape para dentro do painel administrativo do GTM.
+  
+
+**📸 Evidências Visuais: (Infraestrutura Online):**
+
+![Configuração da URL do Servidor no GTM](dia39_config_url_servidor.png)
+
+---
