@@ -74,3 +74,56 @@ Para tirar essa arquitetura do papel utilizando uma infraestrutura de custo zero
 ![Configuração da URL do Servidor no GTM](dia39_config_url_servidor.png)
 
 ---
+### Dia 40: Arquitetura Server-Side (sGTM) - O Cliente vs. A Tag
+
+**A Teoria: A Base do Server-Side**
+
+Para dominar a infraestrutura no GTM Server-Side, é fundamental compreender a separação arquitetônica de responsabilidades entre dois componentes centrais:
+
+* **O Cliente:** Atua como a interface de entrada e processamento inicial do servidor. Ele monitora continuamente as requisições HTTP originadas na web, intercepta os payloads brutos, valida o protocolo e converte as informações em um **Objeto de Dados de Evento** (Event Data Object) padronizado.
+  
+* **A Tag:** Funciona como o agente de roteamento e saída de dados. Ela não recebe requisições externas diretamente; sua função é consumir o evento já normalizado pelo Cliente, aplicar as regras de negócio e realizar o disparo (dispatch) das informações processadas para os endpoints finais.
+
+
+**Prática - Etapa 1: Configuração do Cliente GA4**
+
+O primeiro passo foi preparar o servidor em nuvem para escutar e receber os dados corretamente da web.
+* Validamos a configuração do Cliente **Google Analytics: GA4 (Web)** nativo do sGTM.
+* Habilitamos a opção **Caminhos padrão do GA4**, instruindo o servidor a reconhecer e autorizar o tráfego de entrada na rota oficial `/g/collect`.
+
+*Evidência - Configuração do Cliente:*
+
+![Configuração do Cliente GA4 no sGTM](dia40_config_cliente_ga4.png)
+
+
+**Prática - Etapa 2: Validação de Payload e Injeção de Dados**
+
+Na engenharia de dados, não basta configurar; é preciso testar e atestar o fluxo da informação. Para validar que a infraestrutura provisionada no Stape.io estava operante, realizamos uma injeção manual de payload.
+
+1. Forjamos uma requisição HTTP manual apontando para a nossa *Tagging Server URL*, simulando um disparo real de evento via navegador.
+2. Durante o teste, diagnosticamos e resolvemos um erro de processamento (`dp(...).startsWith is not a function`). O erro ocorreu porque o Cliente GA4 exige parâmetros obrigatórios de origem para estruturar o dado adequadamente.
+3. Ajustamos o payload adicionando o parâmetro `&dl=` (Document Location) e disparamos a URL limpa e estruturada: 
+   `.../g/collect?v=2&tid=G-TESTE123&en=teste_de_engenharia&cid=123.456&dl=https://meuportfolio.com`
+
+**O Resultado Prático:**
+
+A validação foi concluída com êxito. O painel de diagnóstico (Tag Assistant) confirmou que o Cliente GA4 interceptou a requisição HTTP, reivindicou a solicitação e executou o *parse* automático das informações. A URL de teste foi estruturada em um **Objeto de Dados de Evento** legível pelo servidor, categorizando chaves primárias como `event_name` (teste_de_engenharia), `page_location` e variáveis de `user_agent`.
+
+*Evidência - Payload Processado e Estruturado:*
+![Validação de Payload estruturado no sGTM](dia40_payload_sucesso.png)
+
+**Observação de Debug: O Alerta do `/favicon.ico`**
+
+Durante os testes de injeção de payload via navegador, o painel do Tag Assistant registrou uma solicitação paralela para a rota `/favicon.ico` com o aviso amarelo *"No client claimed the request"* (Nenhum cliente reivindicou a solicitação).
+
+**Análise do Comportamento:**
+
+* **A Origem:** Navegadores web (Chrome, Edge) disparam automaticamente uma requisição buscando o ícone da aba (`favicon.ico`) ao acessar qualquer URL.
+* **O Filtro do Servidor:** Como configuramos nosso Cliente GA4 para escutar estritamente a rota oficial do Analytics (`/g/collect`), ele ignorou a requisição do ícone.
+  
+* **Conclusão:** A ausência de um cliente para processar essa requisição gerou o alerta no log do sistema. Este é um comportamento esperado e positivo, pois prova que o servidor está filtrando o tráfego corretamente e rejeitando requisições (gastos de processamento) que não pertencem ao escopo da engenharia de dados.
+  
+*Evidência - Log de Debug do Sistema:*
+
+![Alerta de requisição sem cliente no sGTM](dia40_debug_favicon.png)
+  
