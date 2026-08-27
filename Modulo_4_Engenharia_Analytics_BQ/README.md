@@ -126,4 +126,47 @@ Durante os testes de injeção de payload via navegador, o painel do Tag Assista
 *Evidência - Log de Debug do Sistema:*
 
 ![Alerta de requisição sem cliente no sGTM](dia40_debug_favicon.png)
-  
+
+----
+
+### Dia 41: Unificando o Fluxo (Web to Server)
+
+A transição para o Server-Side Tracking muda a rota de envio: em vez do navegador do usuário disparar dados diretamente para as plataformas (Google, Meta), ele envia um fluxo único para um servidor próprio.
+
+#### Teoria: Redirecionando a Rota de Dados
+
+Esta mudança de infraestrutura é um pilar na engenharia de dados moderna por resolver problemas críticos da coleta tradicional:
+
+* **Controle e Qualidade:** Atuar em um contexto de primeira parte mitiga o impacto de AdBlockers e restrições de cookies (ITP da Apple), garantindo maior precisão na coleta.
+* **Segurança:** Permite mascarar ou remover dados sensíveis antes de chegarem aos destinos finais.
+* **Performance:** Melhora o tempo de carregamento e o SEO do site, pois reduz a carga de scripts processados pelo navegador.
+
+#### Prática: Configuração da Rota e Interceptação
+
+Para implementar a transição e validar se o pipeline de dados estava íntegro, executamos o seguinte fluxo prático entre os contêineres:
+
+**1. Redirecionamento na Origem (GTM Web):** 
+Acessamos a tag `GA4 - Tag do Google` e adicionamos o parâmetro estrutural `server_container_url` apontando para o servidor. 
+Ao invés de configurar o redirecionamento individualmente em cada evento, optamos por centralizar essa regra na Tag de Configuração base. A imagem ilustra o preenchimento na raiz da tag, o que cria uma regra de herança obrigatória. Isso elimina o risco de vazamento de dados e garante que absolutamente todo o tráfego do site flua através da nossa infraestrutura desde o momento em que a página é carregada.
+
+![Configuração da rota no Web GTM](ga4-server-container-url.png)
+
+**2. Interceptação e Estruturação (GTM Server):** 
+No servidor, confirmamos a chegada do dado. O "Cliente" GA4 atuou interceptando a requisição HTTP bruta, assumindo a propriedade da solicitação, e a converteu em um pacote de dados limpo e estruturado.
+A imagem destaca o status "Solicitação reivindicada" e a aba de "Dados do evento". Esta é uma etapa importante do sGTM. A escolha de usar o Cliente nativo do GA4 abstrai toda a complexidade do protocolo HTTP bruto. Ele atua como um tradutor, pegando uma URL caótica e transformando-a em um *Event Data Object* padronizado (contendo variáveis separadas como `client_id`, `user_agent`, `ip`). Essa estruturação é o que permite construir um pipeline escalável, pois agora qualquer outra tag (como a API de Conversões da Meta) poderá consumir esses mesmos dados limpos.
+
+![Cliente GA4 reivindicando a requisição no Server](server-preview-dados-evento.png)
+
+**3. Despacho Final (GTM Server):** 
+Criamos um acionador disparado pela variável de sistema `Client Name` (exatamente igual a `GA4`) e configuramos a tag responsável pela entrega final, a `GA4 - Servidor`. 
+Como demonstrado na imagem, o campo "ID da métrica" foi intencionalmente deixado em branco. Essa decisão foi para  garantir a escalabilidade do sistema. Ao deixar o campo vazio, forçamos a Tag a extrair dinamicamente o Measurement ID e todos os parâmetros diretamente do *Event Data Object* estruturado no passo anterior. Isso cria uma configuração livre de redundâncias e à prova de falhas: se o contêiner Web gerenciar múltiplos IDs do GA4 no futuro, esta única Tag do servidor será capaz de rotear todos eles corretamente sem nenhuma alteração manual. O acionador por `Client Name` adiciona uma camada de segurança, garantindo que esta tag só dispare se a origem dos dados for, de fato, o cliente GA4.
+
+![Configuração da Tag GA4 no Servidor](tag-ga4-servidor.png)
+
+**4. Validação End-to-End (Preview):** 
+Rodamos o modo de visualização simultaneamente no Web e no Server. Simulamos a interação no front-end e acompanhamos o evento nascer no navegador, ser interceptado pelo servidor e, por fim, disparar com sucesso a tag de envio.
+A imagem final do debug comprovando o status de "Fired" na aba Tags é a validação definitiva do pipeline de dados. Sem esta etapa de verificação simultânea, seria impossível garantir que a camada de abstração (Web -> Servidor) não fragmentou o *payload* (pacote de dados). O disparo bem-sucedido documentado atesta que o Google Analytics recebeu a requisição final através do nosso servidor, selando a migração arquitetônica e atestando a confiabilidade dos dados coletados.
+
+![Tag GA4 disparada com sucesso no Server GTM](preview-tag-fired.png)
+
+
