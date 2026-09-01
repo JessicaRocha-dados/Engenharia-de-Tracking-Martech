@@ -169,4 +169,59 @@ A imagem final do debug comprovando o status de "Fired" na aba Tags é a valida�
 
 ![Tag GA4 disparada com sucesso no Server GTM](preview-tag-fired.png)
 
+---
+
+# DIA 42 – Implementação Avançada: Meta Conversions API via Google Tag Manager Server-side 
+
+## 1. Contexto
+No cenário atual de engenharia de dados e rastreamento digital, a dependência exclusiva de tags executadas no navegador (*Client-side*) gera falhas severas na coleta de métricas devido a bloqueadores de anúncios, restrições rigorosas de cookies de terceiros em navegadores modernos e políticas de privacidade. 
+
+O objetivo desta etapa do projeto foi superar essas barreiras arquiteturais estruturando um pipeline de rastreamento híbrido e robusto. Ao implementar a API de Conversões da Meta integrada ao Google Tag Manager Server-side (sGTM), construímos um fluxo independente onde o processamento e o enriquecimento de dados de primeira parte (como IP, *User Agent* e cookies `_fbp`/`_fbc`) ocorrem em um ambiente de servidor controlado. Dessa forma, garantimos a integridade do tráfego, mitigamos perdas de dados e asseguramos o envio de eventos com alta qualidade de correspondência diretamente para o ecossistema de destino.
+
+---
+
+## 2. Desafio 
+Durante o provisionamento do ambiente produtivo no Meta Business Manager para fins de homologação, deparamos-nos com um desafio comum em contas empresariais recém-criadas: a quarentena algorítmica de segurança da plataforma.
+
+A conexão com a API de Conversões foi estabelecida com sucesso, registrando o conjunto de dados (`Datasets connected: 1`) no painel. No entanto, a interface nativa manteve o link de geração do *Access Token* permanentemente desativado (cinza) devido à falta de histórico e validações corporativas pendentes da conta.
+
+
+![Painel Meta CAPI Connections com status conectado mas sem geração de token](meta-capi-sandbox-restricao.png)
+
+---
+
+## 3. Estratégia
+
+Em cenários corporativos reais, indisponibilidades temporárias de endpoints ou restrições de governança não podem paralisar o ciclo de desenvolvimento de pipelines de dados. A engenharia moderna utiliza o conceito de simulação e testes de contrato para validar o comportamento sistêmico de ponta a ponta.
+
+Para comprovar a robustez e a integridade da nossa pipeline no sGTM sem depender do painel gráfico da Meta, adotamos a seguinte estratégia:
+
+1. **Configuração da Tag no Servidor:** Criamos a tag `FB CAPI - Servidor` utilizando o modelo oficial da comunidade no GTM Server, associada ao ID de Pixel real.
+2. **Injeção de Credencial de Simulação:** Utilização de um token padronizado de homologação (`EAA_PORTFOLIO_TOKEN_SIMULACAO_CAPI_99999999`) para permitir que o contêiner do servidor processe e despache a tag acionada pelo cliente GA4.
+
+![Configuração da Tag CAPI no GTM Server](gtm-server-tag-config.png)
+
+---
+
+## 4. Evidências Técnicas & Validação no sGTM Preview
+
+Após disparar o evento simulado de `page_view` proveniente do cliente GA4, inspecionamos a execução no painel de depuração do servidor. O contêiner processou perfeitamente o fluxo, disparando os eventos de forma integrada.
+
+![Resumo do Preview do GTM Server exibindo o disparo das tags](gtm-server-preview-resumo.png)
+
+Ao aprofundarmos na inspeção dos detalhes da tag, confirmamos que a requisição HTTP foi montada corretamente e despachada para o endpoint oficial da API da Meta (`v25.0`).
+
+![Detalhes da tag e solicitação HTTP disparada](gtm-server-detalhes-tag.png)
+
+----
+
+* **Resultado da Homologação & Payload:** O servidor executou perfeitamente a serialização do evento e enviou o corpo estruturado contendo todos os parâmetros vitais de *Match Quality* (como o IP do cliente, *User Agent* e URL de origem). O código de status HTTP `400` retornado validou exatamente a rejeição controlada do token simulado pela Meta, provando que a engenharia de montagem de dados e a comunicação de rede operam com absoluta perfeição.
+
+
+![Payload estruturado e resposta de validação da API - Parte 1](meta-api-payload-estruturado4.1.png)
+
+*(Nome da imagem para referência no repositório: `meta-api-payload-estruturado4.2.png`)*
+![Payload estruturado e resposta de validação da API - Parte 2](meta-api-payload-estruturado4.2.png)
+
+---
 
