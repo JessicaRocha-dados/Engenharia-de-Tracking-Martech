@@ -220,7 +220,8 @@ Ao aprofundarmos na inspeção dos detalhes da tag, confirmamos que a requisiç�
 
 ![Payload estruturado e resposta de validação da API - Parte 1](meta-api-payload-estruturado4.1.png)
 
-*(Nome da imagem para referência no repositório: `meta-api-payload-estruturado4.2.png`)*
+---
+
 ![Payload estruturado e resposta de validação da API - Parte 2](meta-api-payload-estruturado4.2.png)
 
 ---
