@@ -218,11 +218,12 @@ Ao aprofundarmos na inspeção dos detalhes da tag, confirmamos que a requisiç�
 * **Resultado da Homologação & Payload:** O servidor executou perfeitamente a serialização do evento e enviou o corpo estruturado contendo todos os parâmetros vitais de *Match Quality* (como o IP do cliente, *User Agent* e URL de origem). O código de status HTTP `400` retornado validou exatamente a rejeição controlada do token simulado pela Meta, provando que a engenharia de montagem de dados e a comunicação de rede operam com absoluta perfeição.
 
 
+![Payload estruturado e resposta de validação da API - Parte 2](meta-api-payload-estruturado4.2.png)
+
+---
+
 ![Payload estruturado e resposta de validação da API - Parte 1](meta-api-payload-estruturado4.1.png)
 
 ---
 
-![Payload estruturado e resposta de validação da API - Parte 2](meta-api-payload-estruturado4.2.png)
-
----
 
