@@ -226,4 +226,47 @@ Ao aprofundarmos na inspeção dos detalhes da tag, confirmamos que a requisiç�
 
 ---
 
+# Dia 43 – Transformações e Governança: Limpeza de PII e Mitigação de ITP
 
+## 1. Contexto e Objetivo do Projeto
+Na evolução da nossa arquitetura de rastreamento *Server-to-Server*, garantir a conformidade com leis de privacidade como LGPD e GDPR e contornar as restrições severas de rastreamento em navegadores modernos é uma prioridade crítica. 
+
+O objetivo desta etapa é implementar camadas de **Transformação de Dados** diretamente no servidor (sGTM), focando em dois pilares:
+
+* **Limpeza de PII (*Personally Identifiable Information*):** Omitir dados sensíveis, como o endereço IP do usuário, antes do envio para plataformas de anúncios terceiras.
+* **Prolongamento de Cookies (ITP):** Preparar a infraestrutura para mitigar políticas de expiração de cookies impostas por navegadores como Safari, utilizando contexto de primeira parte.
+
+
+## 2. Fundamentação Teórica
+
+Em pipelines convencionais (*Client-side*), o navegador do usuário envia dados diretamente para plataformas externas, dificultando o controle sobre informações sensíveis. Com o sGTM, a arquitetura ganha controle absoluto sobre o fluxo. 
+
+Criamos uma camada de **Transformação** para interceptar, mascarar ou excluir dados restritos antes da saída do servidor. Isso garante a utilidade analítica das campanhas sem expor a identidade do usuário, operando em total conformidade com diretrizes jurídicas globais.
+
+
+## 3. Configuração da Regra de Omissão de IP
+
+Configuramos uma regra de transformação no GTM Server para atuar como um escudo de privacidade automatizado. O escopo foi definido como "Sempre aplicar" em **Todas as tags**, garantindo que nenhuma integração (atual ou futura) consiga vazar o endereço de rede do usuário. 
+
+Os parâmetros alvo para exclusão foram mapeados como `ip_override` e `client_ip_address`.
+
+
+![Configuração da Transformação no sGTM com aplicação global para exclusão de IPs](sgtm-regra-omissao-ip.png)
+
+---
+
+## 4. Validação e Evidências Técnicas
+
+Para homologar a eficiência da regra, disparamos um evento de teste e monitoramos o processamento em tempo real no painel de depuração do servidor. A inspeção comprovou que o servidor detectou o IP de origem e aplicou imediatamente a exclusão da variável no momento do processamento.
+
+
+![Detalhes da transformação interceptando e excluindo o dado do evento original](sgtm-transformacao-execucao.png)
+
+A prova definitiva de conformidade ocorre na inspeção do tráfego de saída. Ao analisarmos a requisição HTTP final enviada para a Meta, o *Payload* (corpo estruturado JSON) confirma a ausência absoluta da chave de IP. 
+
+
+![Payload estruturado disparado para a API da Meta atestando a anonimização do tráfego](meta-capi-payload-anonimizado.png)
+
+A implementação desta regra elevou a maturidade do pipeline, aplicando os princípios *Privacidade desde a concepção* diretamente na infraestrutura de dados. O ambiente agora protege a privacidade do usuário de ponta a ponta de forma automatizada, entregando pacotes de dados devidamente limpos para o ecossistema de marketing corporativo.
+
+---
