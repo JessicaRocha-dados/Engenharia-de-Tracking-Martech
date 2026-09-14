@@ -267,6 +267,45 @@ A prova definitiva de conformidade ocorre na inspeção do tráfego de saída. A
 
 ![Payload estruturado disparado para a API da Meta atestando a anonimização do tráfego](meta-capi-payload-anonimizado.png)
 
+---
+
+# DIA 44 – Conexão GA4 e BigQuery: Arquitetura de Dados 
+
+## 1. Contexto e Objetivo do Projeto
+A interface nativa do GA4 é otimizada para relatórios rápidos, mas apresenta barreiras estruturais severas para análises avançadas de mídia paga. Ao tentar realizar cruzamentos complexos, esbarramos em três problemas:
+* **Amostragem:** O GA4 analisa apenas uma fração do tráfego em alto volume e infere o restante, destruindo a precisão matemática dos dados.
+* **Limites de Cardinalidade:** Dimensões com muitos valores únicos (como URLs ou campanhas) são agrupadas em uma linha genérica `(other)`.
+* **Thresholding:** Omissão de dados por regras de privacidade em volumes baixos de tráfego.
+
+O objetivo desta etapa é conectar o fluxo de coleta diretamente ao **Google BigQuery**, estabelecendo um banco de dados. Cada evento validado pelo pipeline vira uma linha imutável no *Data Warehouse*, sem amostragem, permitindo a futura construção de modelos de atribuição reais via SQL.
+
+---
+
+## 2. Decisão Arquitetural: Sandbox e Custo Zero
+Para este laboratório, decidi utilizar o ambiente **Sandbox do Google Cloud Platform (GCP)**, que fornece limites robustos de armazenamento e processamento gratuitos sem a necessidade de vincular uma conta de faturamento.
+
+Como a exportação "Contínua" exige um cartão de crédito cadastrado na nuvem, configuramos a **Exportação Diária**. Essa abordagem garante que trabalharemos exclusivamente com os nossos próprios dados reais gerados pelo GTM Server, mantendo o custo de infraestrutura em R$ 0,00.
+
+---
+
+## 3. Configuração Realizada
+A infraestrutura foi provisionada e o vínculo entre as plataformas foi estabelecido com sucesso:
+1. Provisionamento do projeto `Portifolio Martech` no Google Cloud Platform.
+2. Vinculação estabelecida no painel Administrativo do GA4 > Vínculos do BigQuery.
+3. Região de processamento definida como `Estados Unidos (us)` para garantir conformidade de armazenamento multi-região.
+4. Frequência de exportação de Eventos e Usuários configurada como **Diária**, preservando a arquitetura Sandbox.
+
+![Revisão do Projeto e Local dos Dados no GA4](ga4-bq-configuracao-diaria1.png)
+![Configuração da frequência de exportação diária confirmada](ga4-bq-configuracao-diaria2.png)
+![Confirmação de sucesso: Vinculação Criada no GA4](ga4-bq-vinculacao-criada.png)
+
+---
+
+## 4. Próximos Passos: Validação 
+Como a exportação diária processa os pacotes em lote durante a madrugada, o tráfego de teste gerado no dia de hoje será consolidado pelo Google nas próximas horas. 
+
+No próximo dia do desafio, acessaremos o BigQuery Studio para validar a criação automática das tabelas particionadas (`events_` e `users_`) e realizaremos as primeiras extrações via SQL direto na nuvem para atestar a qualidade dos dados.
+
 A implementação desta regra elevou a maturidade do pipeline, aplicando os princípios *Privacidade desde a concepção* diretamente na infraestrutura de dados. O ambiente agora protege a privacidade do usuário de ponta a ponta de forma automatizada, entregando pacotes de dados devidamente limpos para o ecossistema de marketing corporativo.
 
 ---
