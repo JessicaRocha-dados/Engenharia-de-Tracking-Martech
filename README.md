@@ -1,45 +1,43 @@
-# 🚀 Engenharia de Tracking & Martech: 60 Dias de Imersão
+# 🚀 Engenharia de Tracking & Martech: Infraestrutura e Qualidade de Dados
 
 > "Um modelo de dados perfeito não salva uma coleta de dados ruim. Garbage in, garbage out."
 
-Bem-vindo(a) ao meu repositório de **Engenharia de Rastreamento e Analytics**. 
+Bem-vindo(a) ao repositório dos meus estudos e aplicações práticas em Engenharia de Rastreamento e Analytics.
 
-Após concluir uma imersão intensiva de 90 dias em Análise de Dados (SQL, Excel e Power BI), percebi que a verdadeira dor do mercado de marketing não é a falta de dashboards bonitos, mas sim a **fragmentação e a falta de confiabilidade dos dados na origem**. 
+Após concluir meu roteiro de 90 dias focado em Análise de Dados (SQL, Excel e Power BI), percebi na prática que um dos maiores gargalos do mercado não é a falta de dashboards, mas sim a fragmentação e a falta de confiabilidade dos dados na sua origem. 
 
-Este repositório documenta a minha jornada de 60 dias construindo soluções de infraestrutura do zero absoluto ao nível de engenharia, garantindo que a coleta de dados seja fiel à realidade antes de chegar a qualquer modelo de Machine Learning ou painel de BI.
+Este repositório documenta a minha jornada contínua de aprendizado para construir bases sólidas de coleta de dados. O objetivo aqui é investigar problemas reais e garantir que a coleta seja estruturada e fiel à realidade antes de chegar a qualquer modelo de Machine Learning ou painel de BI.
 
----
+## 🛠️ Stack Tecnológica
 
-## 🛠️ Stack Tecnológico
 * **Coleta e Lógica:** Google Tag Manager (GTM Client-Side & Server-Side), JavaScript (Custom JS), HTML/CSS (DOM Scraping).
 * **Analytics e Negócios:** Google Analytics 4 (GA4), Estrutura de E-commerce, Consent Mode V2.
-* **Engenharia e Banco de Dados:** Google BigQuery, SQL (foco em `UNNEST` e recálculo de métricas brutas).
+* **Engenharia e Banco de Dados:** Google BigQuery, SQL (foco em UNNEST e recálculo de métricas brutas).
 * **Visualização:** Looker Studio.
 
----
+## 📅 Estrutura do Projeto (Roadmap de Estudos)
 
-## 📅 Estrutura do Desafio (Roadmap)
+Aqui você encontrará os scripts, arquiteturas (Data Layers) e queries SQL que venho desenvolvendo e documentando, divididos por fases de aprendizado:
 
-Aqui você encontrará todos os scripts, arquiteturas (Data Layers) e queries SQL desenvolvidos durante o desafio, divididos por módulos:
+### 📁 Fase 1: Os Fundamentos da Coleta (GA4 + GTM Web)
+A base do rastreamento web. Estruturação de Variáveis, Acionadores, Tags, Auto-Event Tracking e garantia de qualidade (QA) via fluxo de DebugView.
 
-### 📁 [Módulo 1: Os Fundamentos da Coleta (GA4 + GTM Web)](./Modulo_1_Fundamentos_GTM)
-* **Dias 1 a 14:** A base da internet. Variáveis, Acionadores, Tags, Auto-Event Tracking e garantia de qualidade (QA) via DebugView.
+### 📁 Fase 2: O Motor do Tracking e Lógica Avançada
+Evolução na confiabilidade dos dados: abandono de regras baseadas em CSS (que são frágeis) e adoção do padrão dataLayer. Construção de eventos personalizados, tabelas de Regex e injeção de Custom JS.
 
-### 📁 [Módulo 2: O Motor do Tracking e Lógica Avançada](./Modulo_2_Motor_Tracking_DataLayer)
-* **Dias 15 a 28:** Abandono de regras baseadas em CSS (frágeis) e adoção do `dataLayer`. Construção de eventos personalizados, tabelas de Regex e injeção de Custom JS.
+### 📁 Fase 3: E-commerce, Consentimento e Visualização
+Aplicação do esquema oficial de Items Array do Google para funis transacionais (do `view_item` até `purchase`), adequação à LGPD (Consent Mode V2) e montagem de dashboards executivos.
 
-### 📁 [Módulo 3: E-commerce, Consentimento e Visualização](./Modulo_3_Ecommerce_ConsentMode)
-* **Dias 29 a 42:** O esquema oficial de *Items Array* do Google, funis transacionais (`view_item` até `purchase`), adequação à LGPD (Consent Mode V2) e dashboards executivos.
-
-### 📁 [Módulo 4: Nuvem, Server-Side e Engenharia Analytics](./Modulo_4_Engenharia_Analytics_BQ)
-* **Dias 43 a 60:** A intersecção com a Ciência de Dados. Provisionamento de servidor (sGTM), contorno de ITPs, exportação de dados brutos para o BigQuery e queries SQL complexas para recálculo de LTV e ROI.
+### 📁 Fase 4: Nuvem, Server-Side e Engenharia Analytics
+A intersecção com a Engenharia de Dados. Estudos práticos sobre provisionamento de servidor na nuvem para Server-Side GTM, contorno de bloqueadores (ITPs), exportação de dados brutos para o BigQuery e queries SQL para recálculo de métricas como LTV e ROI.
 
 ---
 
 ## 👩‍💻 Sobre a Autora
-**Jéssica Rocha**
-*Estudante de Ciência de Dados e profissional focada em Engenharia Analytics para Marketing (Martech).*
 
-Acredito no poder de *aprender em público*. Todo o código aqui é voltado para resolver problemas do mundo real. 
+**Jéssica Rocha**  
+Recém-formada no CST em Ciência de Dados e profissional atuando de forma autônoma estruturando soluções de métricas para clientes de tráfego pago. 
 
-📫 **Acompanhe as atualizações diárias:** [https://www.linkedin.com/in/jessica-rocha-dados/]
+Acredito no poder de aprender em público e de colocar a mão na massa. Todo o código e documentação presentes aqui refletem meu momento atual: uma profissional em início de jornada, focada em investigar problemas, documentar acertos e erros, e construir uma base técnica sólida aplicável ao mundo real.
+
+📫 **Acompanhe minhas atualizações e conexões:** [https://www.linkedin.com/in/jessica-rocha-dados/]
