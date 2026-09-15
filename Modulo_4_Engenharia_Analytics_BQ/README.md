@@ -309,3 +309,74 @@ No próximo dia do desafio, acessaremos o BigQuery Studio para validar a criaç�
 A implementação desta regra elevou a maturidade do pipeline, aplicando os princípios *Privacidade desde a concepção* diretamente na infraestrutura de dados. O ambiente agora protege a privacidade do usuário de ponta a ponta de forma automatizada, entregando pacotes de dados devidamente limpos para o ecossistema de marketing corporativo.
 
 ---
+# DIA 45 – Rastreamento de Conversões e Refinamento de Dados no Pipeline (GA4, GTM Web/Server & BigQuery)
+
+## 1. Contexto e Objetivo do Projeto
+
+Após a consolidação da infraestrutura de Data Warehouse estabelecida no dia anterior, o objetivo desta etapa foi avançar na maturidade do rastreamento de mídia paga. Um pipeline de dados robusto precisa ir além do tráfego básico de páginas (`page_view`): ele deve capturar conversões reais de negócios com precisão cirúrgica e garantir que o ecossistema de nuvem receba os dados limpos de distorções geográficas causadas por servidores intermediários.
+
+Nesta fase, focamos em três pilares:
+
+* **Rastreamento de Conversões (Leads):** Mapeamento do envio bem-sucedido de formulários utilizando eventos personalizados integrados à camada de dados.
+* **Validação de Fluxo:** Acompanhamento do tráfego do navegador até o servidor em nuvem (Stape) e sua chegada sem amostragem ao GA4.
+* **Correção de Geolocalização:** Solução do problema clássico de infraestrutura Server-Side onde o IP do servidor substitui o IP real do usuário, ajustando a geolocalização dos eventos para o Brasil.
+
+## 2. Etapas de Implementação e Validação
+
+### Passo 1: Validação da Infraestrutura no BigQuery Studio
+
+Antes de iniciar os testes de conversão, realizamos a primeira extração de dados no Data Warehouse provisionado no GCP. A exportação diária processou com sucesso os pacotes em lote, criando o dataset e as tabelas particionadas no ambiente Sandbox.
+
+![Exportação diária validada no BigQuery](dia45-01-bigquery-exportacao-diaria-validada.png)
+
+```sql
+SELECT 
+  event_date,
+  event_timestamp,
+  event_name,
+  user_pseudo_id,
+  geo.country
+FROM 
+  `portifolio-martech.analytics_538183128.events_*`
+ORDER BY 
+  event_timestamp DESC
+LIMIT 10;
+```
+
+![Primeira extração via SQL no BigQuery](dia45-02-bigquery-sql-primeira-extracao.png)
+
+A consulta SQL atestou que os eventos básicos (`page_view`, `user_engagement`, `scroll`) e personalizados (`view_footer`) já estavam armazenados em formato bruto e estruturado.
+
+### Passo 2: Configuração e Disparo de Conversões no GTM Web
+
+Utilizando a camada de dados do site de testes hospedado no GitHub Pages, configuramos a interceptação do envio de formulários de newsletter.
+
+1. O usuário aciona a inscrição, disparando o evento personalizado `lead_gerado` mapeado no Data Layer.
+2. O GTM Web captura o evento e o traduz para o padrão corporativo recomendado pelo Google Analytics 4: `generate_lead`.
+
+![GTM Web capturando o evento lead_gerado via Data Layer](dia45-03-gtm-web-datalayer-lead.png)
+
+### Passo 3: Roteamento via GTM Server-Side (Stape)
+
+Com o evento empacotado no navegador, a requisição foi direcionada para o contêiner do GTM Server-Side. O painel de debug do servidor confirmou o processamento bem-sucedido da conversão, repassando o pacote limpo para o endpoint do GA4 enquanto gerenciava de forma isolada as chamadas de API de conversão externa.
+
+![GTM Server-Side recebendo e processando a conversão](dia45-04-gtm-server-recebendo-conversao.png)
+
+### Passo 4: Refinamento Técnico e Correção de Geolocalização
+
+Como o tráfego em arquiteturas Server-Side passa primeiro por um servidor em nuvem, o GA4 inicialmente registrava os acessos geolocalizados nos Estados Unidos.
+
+![GA4 em tempo real registrando o evento generate_lead](dia45-05-ga4-tempo-real-generate-lead.png)
+
+Para resolver essa anomalia e garantir a integridade analítica:
+
+1. Criamos uma variável no GTM Server baseada no cabeçalho HTTP `X-Forwarded-For` para resgatar o IP real do visitante.
+2. Injetamos o parâmetro de substituição `ip_override` na tag de disparo do GA4.
+
+O resultado foi validado em tempo real: o painel do Google Analytics passou a computar os eventos de conversão e a posicionar corretamente o usuário ativo no Brasil (São Paulo).
+
+![GA4 em tempo real com geolocalização corrigida para o Brasil após IP Override](dia45-06-ga4-ip-override-brasil.png)
+
+## 3. Conclusão da Etapa
+
+Com as validações concluídas, a arquitetura de dados do laboratório atinge um patamar avançado de engenharia de tracking. O pipeline agora garante rastreamento de conversões sem perda de dados, conformidade técnica com o tratamento de IPs e armazenamento imutável pronto para alimentar modelos de atribuição e dashboards executivos.
