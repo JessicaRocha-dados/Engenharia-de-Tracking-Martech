@@ -380,3 +380,29 @@ O resultado foi validado em tempo real: o painel do Google Analytics passou a co
 ## 3. Conclusão da Etapa
 
 Com as validações concluídas, a arquitetura de dados do laboratório atinge um patamar avançado de engenharia de tracking. O pipeline agora garante rastreamento de conversões sem perda de dados, conformidade técnica com o tratamento de IPs e armazenamento imutável pronto para alimentar modelos de atribuição e dashboards executivos.
+
+---
+
+## DIA 46 – Ingestão de Dados, ELT e FinOps (Camada Bronze)
+
+### 1. Contexto do Projeto e Evolução Arquitetural
+Após garantir a exportação diária dos eventos do GA4 no BigQuery, o objetivo desta etapa foi simular a extração real do Data Warehouse e iniciar a implementação lógica da **Arquitetura Medalhão (Medallion Architecture)** via Python e Pandas.
+
+Nesta fase, focamos nos conceitos como:
+* **Pipeline ELT (Extract, Load, Transform):** Exportamos o dataset bruto do BigQuery e realizamos a ingestão na primeira camada lógica (Bronze), sem realizar limpezas prévias.
+* **FinOps (Otimização de Custos):** A extração e leitura ocorrem em lote (Batch), consumindo poder computacional de forma pontual sob demanda, em vez de manter instâncias ligadas 24/7.
+
+### 2. Etapas de Implementação
+
+**Passo 1: Estabelecimento da Camada Bronze**
+Importamos o dataset real (`dia46_bronze_eventos_ga4.csv`). O dado foi mantido estritamente em seu estado bruto (ex: a coluna `event_date` armazenada nativamente como número inteiro `YYYYMMDD` pela API do Google), respeitando a regra fundamental de imutabilidade do Data Lakehouse.
+
+![Camada Bronze - Dados Brutos](dia46-01-dados-brutos-bronze.png)
+
+**Passo 2**:
+Desenvolvemos o script de leitura (`dia46_ingestao_bronze.py`) para consumir os eventos em lote, estruturar o DataFrame e preparar o terreno para a futura etapa de transformação (Camada Silver), onde as tipagens e limpezas serão aplicadas.
+
+![Script de Ingestão](dia46-02-script-ingestao-bronze.png)
+
+### 3. Conclusão e Impacto Arquitetural 
+O desenvolvimento deste script consolida a base de um Data Lakehouse moderno. A decisão de extrair os eventos do GA4 e armazená-los estritamente em seu estado bruto (Camada Bronze) materializa a transição do padrão ETL legado para o **ELT**. Utilizando Python e Pandas para uma ingestão em lote (Batch), eliminamos a dependência de servidores de transformação rodando ininterruptamente. Essa abordagem atende diretamente aos princípios de **FinOps**, otimizando os custos computacionais da nuvem.
