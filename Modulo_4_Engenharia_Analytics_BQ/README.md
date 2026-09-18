@@ -421,3 +421,27 @@ Através do Pandas, injetei duas novas colunas no momento exato da ingestão:
 
 Abaixo, a demonstração da implementação no código e a validação das colunas geradas no terminal:
 ![Implementação de Governança e Data Lineage na Camada Bronze](bronze-data-lineage.png)
+
+---
+### DIA 47 - Camada Silver: Limpeza, Tipagem e Data Quality
+
+Com a ingestão bruta garantida na Camada Bronze, a etapa seguinte do pipeline ELT consistiu em higienizar o dataset do GA4, aplicando regras de qualidade de dados (*Data Quality*) através da biblioteca Pandas. O objetivo desta camada é refinar o dado, entregando uma base estruturada, livre de inconsistências e pronta para cruzamentos seguros no Data Lakehouse.
+
+As seguintes transformações foram aplicadas no script `dia47_limpeza_silver.py`:
+* **Conversão de Tipagem:** A coluna `event_date` (extraída da API como número inteiro) foi convertida para o formato padrão de banco de dados `datetime64[ns]` (`YYYY-MM-DD`), essencial para filtros temporais analíticos.
+* **Tratamento de Nulos (NaN):** Valores ausentes na origem foram preenchidos preventivamente com *strings* de controle (ex: `NÃO INFORMADO` e `ID_AUSENTE`), blindando a base contra quebras sistêmicas em futuros cruzamentos (JOINs) via SQL.
+* **Padronização de Strings:** Aplicação de caixa alta (`.upper()`) em colunas categóricas de texto para evitar divergências de agrupamento e garantir métricas exatas no BI.
+
+Abaixo, a evidência da execução do script e a validação técnica das novas tipagens diretamente no terminal:
+
+![Limpeza e Transformação na Camada Silver](silver-transformacao-pandas.png)
+
+**📌 Observação Técnica: Escalabilidade em Ambientes de Big Data**
+O escopo atual contempla as higienizações fundamentais para a estrutura deste dataset. Em cenários corporativos de alto volume (milhões de eventos diários) ou ao integrar bases auxiliares (como CRMs), a lógica desta Camada Silver seria expandida para incorporar:
+* **Desduplicação Ativa:** Implementação de `.drop_duplicates()` para mitigar falhas de rede das APIs de anúncios, que frequentemente disparam eventos duplicados.
+* **Adequação à LGPD/GDPR (Mascaramento de PII):** Aplicação de algoritmos de criptografia (*hash SHA-256*) em dados sensíveis (e-mail, CPF). 
+* **Parsing de UTMs:** Desmembramento de parâmetros complexos de URL através de Expressões Regulares (*Regex*) para isolar origem, mídia e campanha em colunas dedicadas.
+* **Filtros de Tráfego Inválido:** Exclusão automatizada de eventos gerados por IPs internos da empresa ou *bots* mapeados, garantindo a pureza do ROI das campanhas.
+* **Resultado:** Arquivo refinado (`dia47_silver_eventos_ga4.csv`) gerado com sucesso, encerramos a fase de transformação e nos prepararemos para as agregações de negócio na Camada Gold.
+  
+**Nota: O GA4 já provê conformidade nativa ao anonimizar os usuários via `user_pseudo_id`, dispensando o hash nesta etapa específica.**
