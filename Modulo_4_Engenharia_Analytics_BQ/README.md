@@ -406,3 +406,18 @@ Desenvolvemos o script de leitura (`dia46_ingestao_bronze.py`) para consumir os 
 
 ### 3. Conclusão e Impacto Arquitetural 
 O desenvolvimento deste script consolida a base de um Data Lakehouse moderno. A decisão de extrair os eventos do GA4 e armazená-los estritamente em seu estado bruto (Camada Bronze) materializa a transição do padrão ETL legado para o **ELT**. Utilizando Python e Pandas para uma ingestão em lote (Batch), eliminamos a dependência de servidores de transformação rodando ininterruptamente. Essa abordagem atende diretamente aos princípios de **FinOps**, otimizando os custos computacionais da nuvem.
+
+---
+
+###  Governança de Dados e Rastreabilidade (Data Lineage)
+
+Durante a revisão estrutural da Camada Bronze, identifiquei a necessidade técnica de implementar metadados de controle para garantir a rastreabilidade no Data Lakehouse. Com essa atualização no código, o pipeline registra de forma autônoma **quando** e **de onde** cada linha de dado foi extraída.
+
+Através do Pandas, injetei duas novas colunas no momento exato da ingestão:
+* `_ingestion_timestamp`: Captura a data e hora exatas da execução via biblioteca `datetime`.
+* `_source_file`: Identifica o nome do arquivo ou sistema de origem.
+
+**Padrão Arquitetural Adotado:** Utilizei o prefixo sublinhado (`_`) para isolar visualmente e logicamente os metadados gerados pela Engenharia em relação à carga útil de negócios (ex: `event_name` e `user_pseudo_id`). Essa prática garante a integridade do dado bruto na Camada Bronze e viabiliza auditorias precisas em lotes específicos no futuro.
+
+Abaixo, a demonstração da implementação no código e a validação das colunas geradas no terminal:
+![Implementação de Governança e Data Lineage na Camada Bronze](bronze-data-lineage.png)
