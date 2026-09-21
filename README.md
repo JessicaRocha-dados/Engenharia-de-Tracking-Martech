@@ -1,4 +1,4 @@
-# 🚀 Engenharia de Tracking & Martech: Infraestrutura e Qualidade de Dados
+#  Engenharia de Tracking & Martech: Infraestrutura e Qualidade de Dados
 
 > "Um modelo de dados perfeito não salva uma coleta de dados ruim. Garbage in, garbage out."
 
