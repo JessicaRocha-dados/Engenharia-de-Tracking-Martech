@@ -445,3 +445,50 @@ O escopo atual contempla as higienizações fundamentais para a estrutura deste 
 * **Resultado:** Arquivo refinado (`dia47_silver_eventos_ga4.csv`) gerado com sucesso, encerramos a fase de transformação e nos prepararemos para as agregações de negócio na Camada Gold.
   
 **Nota: O GA4 já provê conformidade nativa ao anonimizar os usuários via `user_pseudo_id`, dispensando o hash nesta etapa específica.**
+
+---
+
+## Dia 48: Construindo uma Arquitetura Medalhão no GCP 
+
+Este registro documenta a evolução da nossa infraestrutura de dados focada em marketing analytics. O objetivo foi superar as limitações de execuções locais e construir um pipeline de ponta a ponta (ELT) no Google BigQuery, unindo práticas de Engenharia de Dados e Engenharia de Analytics.
+
+Abaixo, o passo a passo da consolidação do nosso Data Warehouse.
+
+### 1. Infraestrutura como Código (IaC) e Segurança
+O primeiro grande desafio foi contornar conflitos de cache e autenticação local. A solução adotada foi a implementação de uma **Service Account**.
+
+Para garantir o padrão de segurança do mercado, o arquivo `credenciais_gcp.json` foi isolado através do `.gitignore`, protegendo a chave contra vazamentos no repositório. Em seguida, executamos o script `00_setup_arquitetura.py`. Este código conectou-se ao GCP e provisionou automaticamente os datasets `bronze` e `silver`, utilizando parâmetros de idempotência (`exists_ok=True`) para evitar duplicidades na infraestrutura.
+
+![Setup e Segurança](dia48_setup_arquitetura_iac.png)
+
+---
+
+### 2. Ingestão de Dados Brutos (Camada Bronze)
+Após o provisionamento dos ambientes em nuvem, iniciamos o processo de extração e carga. Executamos o script `dia46_ingestao_bronze.py`, responsável por ler os arquivos originais e fazer o upload para o banco.
+
+Utilizando o método `to_gbq` da biblioteca Pandas, os eventos brutos foram enviados para a tabela `portifolio-martech.bronze.eventos_ga4`. O terminal registrou a conclusão da carga em 100% com sucesso, garantindo que o dado chegasse ao BigQuery no seu estado original e imutável.
+
+![Ingestão Bronze](execucao_ingestao_bronze.png)
+
+---
+
+### 3. Qualidade e Limpeza (Camada Silver)
+Dados brutos não geram análises confiáveis sem tratamento. Na etapa seguinte, simulamos o poder computacional para aplicar regras de **Data Quality** através do script `dia47_limpeza_silver.py`.
+
+Realizamos a conversão das strings de data para o formato `YYYY-MM-DD`, padronizamos o nome dos países e tratamos IDs ausentes. O terminal confirmou a execução e o envio desses dados tratados para a nossa segunda camada no BigQuery.
+
+![Transformação Silver](execucao_transformacao_silver.png)
+
+---
+
+### 4. Engenharia de Analytics e Regras de Negócio (Camada Gold)
+Por fim, com o dado limpo e tipado estruturado na camada Silver, migramos do Python para o **SQL** diretamente na interface do Google Cloud.
+
+Criamos o dataset `gold` e executamos uma consulta para estruturar a nossa Tabela Fato (`fato_eventos_marketing`). Através de agregações baseadas em data e país, consolidamos métricas essenciais como a contagem de interações e o volume de usuários únicos (`COUNT DISTINCT`). A consulta foi finalizada com status de sucesso em 3 segundos, provando a eficiência do processamento na nuvem.
+
+![Criação da Camada Gold](criacao_camada_gold_sql.png)
+
+Com a infraestrutura provisionada e os dados consolidados na camada Gold, o próximo passo do projeto focará na implementação de práticas de DataOps. Desenvolverei testes automatizados de Qualidade de Dados (Data Quality) para atestar a integridade das métricas e garantir total governança antes de liberar a base para consumo em ferramentas de Business Intelligence (BI).
+
+---
+
