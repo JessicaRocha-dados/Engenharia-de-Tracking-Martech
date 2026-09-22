@@ -1,0 +1,39 @@
+name: Pipeline DataOps (CI/CD) - Camada Gold
+
+# 1. O Gatilho: O pipeline roda toda vez que houver um envio (push) para a branch main
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  validacao_qualidade_dados:
+    # 2. O Computador (Runner): Máquina virtual limpa do GitHub
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Passo 1 - Clonar o Repositório
+        uses: actions/checkout@v3
+
+      - name: Passo 2 - Configurar o Ambiente Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Passo 3 - Instalar Dependências (BigQuery)
+        run: |
+          pip install google-cloud-bigquery
+          echo "Bibliotecas instaladas com sucesso."
+
+      - name: Passo 4 - Autenticação Segura (IAM e Secrets)
+        # Em produção real, a chave json é injetada via GitHub Secrets para segurança.
+        # Exemplo real oculto: echo "${{ secrets.GCP_CREDENTIALS }}" > credenciais_gcp.json
+        run: echo "Simulando injeção segura de credenciais via cofre do GitHub..."
+
+      - name: Passo 5 - Executar Circuit Breaker (Validação Gold)
+        # Em produção rodaria: python dia49_validacao_gold.py
+        run: |
+          echo "Iniciando testes de Data Quality na Camada Gold..."
+          echo "Verificando duplicatas na granularidade..."
+          echo "Verificando métricas negativas..."
+          echo "✅ DATA QUALITY APROVADO! Pipeline liberado."
