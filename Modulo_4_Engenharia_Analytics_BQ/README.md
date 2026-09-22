@@ -492,3 +492,32 @@ Com a infraestrutura provisionada e os dados consolidados na camada Gold, o pró
 
 ---
 
+# Dia 49: Implementação de Data Quality e Circuit Breaker na Camada Gold
+
+Nesta fase do projeto, o foco foi estruturar a governança dos dados aplicando princípios fundamentais de **DataOps**. O objetivo do dia foi construir uma barreira de proteção automatizada para garantir que a tabela da Camada Gold esteja perfeitamente íntegra antes de ser consumida por ferramentas de Business Intelligence (BI).
+
+## 1. Conceitos Fundamentais
+Para garantir a confiabilidade do pipeline, aplicamos dois conceitos essenciais de engenharia de dados:
+* **Data Quality:** É o processo de validar se as informações processadas são precisas, consistentes e estão de acordo com as regras do negócio. Sem a garantia de qualidade, um pipeline rápido apenas entrega dados errados mais depressa para a área de negócios.
+* **Circuit Breaker:** Inspirado na engenharia elétrica, é um padrão de arquitetura focado em segurança. No contexto de dados, significa criar um mecanismo de interrupção imediata (*Fail Fast*). Se uma anomalia for detectada na validação, o fluxo é bloqueado, evitando que dados corrompidos atualizem os painéis de visualização.
+
+## 2. Como Funciona no Código (Python + BigQuery)
+Para implementar essa arquitetura, desenvolvi o script `dia49_validacao_gold.py`. O código delega o esforço computacional ao BigQuery, executando consultas SQL para aferir métricas e validando os resultados no Python através do comando `assert`. O `assert` funciona como o nosso "disjuntor": se a condição não for atendida, ele "desarma" e interrompe o código.
+
+O script executa duas frentes de validação:
+1. **Integridade Técnica:** Verifica a granularidade da tabela (combinação de data do evento e país). A consulta SQL conta as ocorrências e o script garante que **não existem linhas duplicadas**.
+2. **Regras de Negócio:** Valida a lógica dos dados da empresa. O sistema garante que as métricas de `total_interacoes` e `total_usuarios_unicos` **nunca apresentem valores negativos**.
+
+## 3. Execução e Aprovação 
+
+Na execução com a base de dados real do projeto, o pipeline fluiu conforme o planejado. O terminal confirmou a aprovação em ambos os testes e o script finalizou com a mensagem de que a Camada Gold está íntegra e liberada para o BI. Isso atesta o sucesso das transformações realizadas na Camada Silver.
+
+![Execução com Sucesso - Teste Aprovado](dia49_validacao_gold.png)
+
+## 4. Simulação de Falha (O Circuit Breaker)
+
+Para comprovar a eficácia prática da barreira de segurança, forcei uma falha alterando intencionalmente uma regra de negócio no código (`WHERE total_interacoes > 0`). 
+O sistema reagiu exatamente como projetado: o código identificou a divergência e disparou a exceção `AssertionError` na linha 50, paralisando a execução e emitindo o log *"🚨 ALERTA DE NEGÓCIO: Existem 1 registros com métricas negativas!"*. 
+Esta simulação atesta a maturidade do pipeline, provando que ele é capaz de proteger o usuário final e alertar a engenharia caso ocorram inconsistências na origem.
+
+![Simulação de Falha - Circuit Breaker Acionado](dia49_erro_circuit_breaker.png)
