@@ -521,3 +521,38 @@ O sistema reagiu exatamente como projetado: o código identificou a divergência
 Esta simulação atesta a maturidade do pipeline, provando que ele é capaz de proteger o usuário final e alertar a engenharia caso ocorram inconsistências na origem.
 
 ![Simulação de Falha - Circuit Breaker Acionado](dia49_erro_circuit_breaker.png)
+
+---
+# Implementação de DataOps e Automação de CI/CD 
+
+Nesta etapa do projeto, o foco foi elevar a maturidade da infraestrutura aplicando conceitos práticos de **DataOps**. Após construirmos as camadas Bronze, Silver e Gold, o desafio deixou de ser apenas processar dados e passou a ser: *como garantir que essa pipeline funcione de forma automática, segura e à prova de falhas?*
+
+Para isso, estruturei uma esteira de Integração e Entrega Contínuas (CI/CD) utilizando o GitHub Actions e organizei a arquitetura do repositório para refletir boas práticas de engenharia.
+
+### 1. Reestruturação e Governança do Repositório
+Antes de automatizar, foi necessário organizar a "casa". A estrutura do projeto foi refinada para garantir que o código e a configuração estivessem perfeitamente isolados e seguros:
+* **Isolamento de Módulos:** Todos os scripts de processamento em Python (desde o `00_setup_arquitetura.py` até o `dia49_validacao_gold.py`) foram consolidados dentro da pasta `Modulo_4_Engenharia_Analytics_BQ`.
+* **Segurança de Credenciais:** As chaves de serviço do GCP (`credenciais_gcp.json`) foram isoladas e protegidas através do arquivo `.gitignore`, garantindo que nenhuma informação sensível de faturamento ou acesso ao BigQuery fosse exposta na nuvem.
+* **Padronização CI/CD:** A pasta `.github/workflows` foi mantida estritamente na raiz do repositório, seguindo o padrão exigido pelo GitHub para o reconhecimento de automações.
+
+![Estrutura do Repositório Organizada](dia49_dataops.png)
+
+### 2. A Pipeline de CI/CD (GitHub Actions)
+A parte mais importante desta etapa é o arquivo `ci_cd_dataops.yml`. Ele atua como um fiscal rigoroso que valida a integridade da nossa Camada Gold de forma automatizada. 
+
+A arquitetura da nossa pipeline foi desenhada com os seguintes passos:
+* **O Gatilho (Trigger):** A automação é disparada automaticamente sempre que um novo código é enviado (`push`) para a branch `main`.
+* **O Ambiente:** O GitHub provisiona uma máquina virtual limpa rodando a versão mais recente do Ubuntu (`ubuntu-latest`).
+* **Step 1 & 2 - Preparação:** O ambiente clona o repositório (`actions/checkout@v3`) e configura a linguagem base instalando o Python na versão 3.10 (`actions/setup-python@v4`).
+* **Step 3 - Dependências:** Instalação das bibliotecas necessárias, especificamente o pacote `google-cloud-bigquery`.
+* **Step 4 - Autenticação Segura:** Simulação da injeção segura de credenciais de produção utilizando o cofre de segredos da plataforma (GitHub Secrets).
+* **Step 5 - Circuit Breaker:** Execução do script `dia49_validacao_gold.py`. Este é o teste final de qualidade: se os dados não passarem nas regras de negócio, a pipeline quebra e impede que dados corrompidos cheguem aos painéis de BI.
+
+![Arquivo YAML e Push da Pipeline](dia49_CI_CD_dataops.png)
+
+### 3. Resultados e Aprendizados
+O resultado dessa orquestração pode ser visto na aba de *Actions* do repositório, onde as execuções da "Pipeline DataOps (CI/CD) - Camada Gold" rodaram com sucesso (indicadas pelos ícones de verificação verdes). 
+
+Essa implementação foi um divisor de águas no meu aprendizado de Python e SQL. Ela prova que construir código é apenas metade do caminho; a outra metade é garantir que ele rode de forma previsível, testável e segura em um ambiente de produção simulado. É um passo fundamental na transição de scripts isolados para uma engenharia de dados real e colaborativa.
+
+![Execução da Pipeline no GitHub Actions](dia49_pipeline_dataops.png)
