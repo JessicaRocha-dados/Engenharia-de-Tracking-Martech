@@ -557,9 +557,83 @@ Essa implementação foi um divisor de águas no meu aprendizado de Python e SQL
 
 ![Execução da Pipeline no GitHub Actions](dia49_pipeline_dataops.png)
 
-### Os Próximos Passos
+---
 
-A jornada de aprendizado e evolução do projeto continua! Com a base de engenharia de rastreamento, processamento de dados e CI/CD já consolidadas, a estrutura evoluirá para novos níveis de maturidade e escala:
+# Dia 50: Orquestração Serverless (GitHub Actions) e Pipeline Idempotente
 
-* **Nuvem e Visão de Orquestração (GCP / Databricks)**
-  O foco será levar a execução da nossa arquitetura para um ambiente de orquestração avançado. O objetivo é explorar como escalar pipelines de dados na nuvem (Google Cloud Platform) e utilizar o Databricks para o processamento e orquestração de fluxos complexos. Essa etapa aproxima ainda mais o projeto dos desafios reais de escalabilidade e Big Data enfrentados na Engenharia de Dados moderna.
+##  A Teoria: Infraestrutura Efêmera e Idempotência
+
+Para dominar a automação de pipelines de dados, é fundamental compreender a alocação de recursos em nuvem e a garantia de consistência no Data Warehouse:
+
+- **Orquestrador Serverless:** utilizamos o **GitHub Actions** para provisionar um ambiente efêmero (Ubuntu Runner). O servidor é instanciado apenas durante a execução do fluxo, executa os scripts (Python/SQL) e é destruído em seguida, otimizando o consumo de recursos computacionais.
+- **Padrão Idempotente (Delete-Insert):** a pipeline foi desenhada para garantir que múltiplas execuções no mesmo dia não gerem duplicidade no BigQuery. A arquitetura identifica e deleta os dados do período alvo antes de inserir a nova carga, mantendo o estado do banco de dados sempre consistente.
+
+
+## Prática - Etapa 1: Configuração do Orquestrador e Injeção de Dependências
+
+O primeiro passo foi preparar o ambiente de execução e a cadência da pipeline via código (`.yml`).
+
+- Configuramos um gatilho **CRON** (`0 6 * * *`) para execução diária automatizada.
+- Instruímos a máquina a configurar o **Python 3.10** e instalar as bibliotecas essenciais (`google-cloud-bigquery`, `pandas`).
+- Injetamos a **Service Account** do Google Cloud de forma segura utilizando o **GitHub Secrets** (`GCP_CREDENTIALS`), criando o arquivo JSON de credenciais dinamicamente durante o tempo de execução para autorizar a comunicação com o BigQuery.
+
+### Evidência - Configuração do Workflow YAML
+
+> **Nota:** o código YAML de configuração está estruturado na pasta [`.github/workflows/orquestracao_diaria.yml`](.github/workflows/orquestracao_diaria.yml) deste repositório.
+
+
+## Etapa 2: Mapeamento Visual de Dependências (DAG)
+
+Na engenharia de dados, a documentação da ordem de execução é crucial. Para representar a sequência lógica da nossa arquitetura, implementamos um **grafo acíclico dirigido (DAG)**.
+
+- Utilizamos a linguagem declarativa **Mermaid** diretamente no arquivo `README.md`.
+- Mapeamos o fluxo estrutural: **Gatilho CRON ➡️ Camada Bronze ➡️ Camada Silver ➡️ Camada Gold (com Circuit Breaker de qualidade de dados) ➡️ Google BigQuery ➡️ Power BI**.
+
+### 📎 Evidência - Diagrama Visual da Arquitetura DAG
+
+```mermaid
+graph TD
+    A[⏰ Gatilho CRON Diário] -->|Inicia Fluxo| B[📥 Ingestão Bruta: Camada Bronze]
+    B -->|Sucesso| C[🧹 Limpeza e Transformação: Camada Silver]
+    C -->|Sucesso| D{Circuit Breaker: Camada Gold}
+    D -->|Dados Válidos| E[(Google BigQuery)]
+    D -.->|Erro de Qualidade| F[❌ Bloqueio da Pipeline]
+    E --> G[📊 Visualização: Power BI]
+```
+
+
+##  Observação de Debug: A Falha na Injeção de Credenciais JSON
+
+Durante os testes de execução da pipeline, a automação falhou no **Passo 7 (Validação da Camada Gold)**. O log apontou uma quebra de leitura na biblioteca `google.auth`:
+
+```text
+json.decoder.JSONDecodeError: Esperando nome da propriedade entre aspas duplas: linha 2 coluna 3 (char 4)
+```
+
+- **O Erro de Formatação:** o formato JSON exige o uso estrito de aspas duplas. Na primeira versão do nosso workflow, utilizamos o comando de terminal `echo` para transferir a credencial do GitHub Secrets para um arquivo físico.
+- **A Causa:** o comando `echo` do Linux interpretou as aspas duplas da Service Account como caracteres de formatação e as removeu do output final. Isso invalidou a estrutura do objeto JSON, impossibilitando a autenticação do Python no GCP.
+- **A Solução:** ajustamos o script de provisionamento no arquivo `.yml`, substituindo o método de injeção. Implementamos a sintaxe `cat << 'EOF' > credenciais_gcp.json`, que instrui o terminal a gravar o texto exatamente no seu formato original bruto, preservando todos os caracteres de escape e aspas duplas da credencial.
+
+### Evidência - Log de Erro `JSONDecodeError`
+
+Visão geral da execução com falha (status **Fracasso**, com o erro de código de saída 1 nas anotações):
+
+![Erro geral da pipeline no GitHub Actions](erro-pipeline-geral.png)
+
+Detalhe do log no **Passo 7 - Circuit Breaker e Camada Gold**, mostrando o `JSONDecodeError` ao ler o arquivo de credenciais:
+
+![Log de erro JSONDecodeError no Passo 7](erro-json-decode.png)
+
+##  O Resultado 
+
+A correção da infraestrutura foi validada com sucesso. O log do Actions confirmou que a credencial foi gravada e lida corretamente. A pipeline atravessou todas as etapas (**Bronze, Silver e Gold**), executou os testes de qualidade no Circuit Breaker e finalizou a limpeza local com o status de **sucesso total (verde)**.
+
+### Evidência - Execução da Pipeline com Status de Sucesso
+
+Execução concluída com status **Sucesso** (as anotações exibem apenas avisos de depreciação do Node.js 20 e da migração do `ubuntu-latest`, sem impacto na pipeline):
+
+![Pipeline executada com sucesso e avisos de depreciação](sucesso-pipeline-avisos.png)
+
+Histórico do workflow no GitHub Actions com as execuções seguintes também concluídas com sucesso:
+
+![Histórico de execuções com status de sucesso](sucesso-pipeline-final.png)
