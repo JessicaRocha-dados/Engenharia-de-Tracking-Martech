@@ -1,11 +1,11 @@
-name: Orquestração Diária - Pipeline de Dados 
+name: Orquestração Diária - Pipeline de Dados (Fase 5)
 
 # O Gatilho: Roda todos os dias às 03:00 da manhã (Horário de Brasília) -> 06:00 UTC
 on:
   schedule:
     - cron: '0 6 * * *'
   
-  # Gatilho manual para podermos testar!
+  # Gatilho manual para podermos testar !
   workflow_dispatch: 
 
 jobs:
@@ -28,12 +28,13 @@ jobs:
 
       - name: Passo 4 - Configurar Credenciais do GCP Seguras
         run: |
-          echo "${{ secrets.GCP_CREDENTIALS }}" > credenciais_gcp.json
+          cat << 'EOF' > credenciais_gcp.json
+          ${{ secrets.GCP_CREDENTIALS }}
+          EOF
         
       - name: Passo 5 - Executar Ingestão Bronze
         run: |
           echo "Simulando Ingestão de dados brutos na Camada Bronze..."
-          
           # python Modulo_4_Engenharia_Analytics_BQ/script_ingestao.py
           
       - name: Passo 6 - Executar Limpeza Silver
