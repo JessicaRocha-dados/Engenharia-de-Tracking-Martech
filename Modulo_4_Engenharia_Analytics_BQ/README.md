@@ -556,3 +556,10 @@ O resultado dessa orquestração pode ser visto na aba de *Actions* do repositó
 Essa implementação foi um divisor de águas no meu aprendizado de Python e SQL. Ela prova que construir código é apenas metade do caminho; a outra metade é garantir que ele rode de forma previsível, testável e segura em um ambiente de produção simulado. É um passo fundamental na transição de scripts isolados para uma engenharia de dados real e colaborativa.
 
 ![Execução da Pipeline no GitHub Actions](dia49_pipeline_dataops.png)
+
+### Os Próximos Passos
+
+A jornada de aprendizado e evolução do projeto continua! Com a base de engenharia de rastreamento, processamento de dados e CI/CD já consolidadas, a estrutura evoluirá para novos níveis de maturidade e escala:
+
+* **Nuvem e Visão de Orquestração (GCP / Databricks)**
+  O foco será levar a execução da nossa arquitetura para um ambiente de orquestração avançado. O objetivo é explorar como escalar pipelines de dados na nuvem (Google Cloud Platform) e utilizar o Databricks para o processamento e orquestração de fluxos complexos. Essa etapa aproxima ainda mais o projeto dos desafios reais de escalabilidade e Big Data enfrentados na Engenharia de Dados moderna.
