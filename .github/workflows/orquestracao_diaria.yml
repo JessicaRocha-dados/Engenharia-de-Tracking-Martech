@@ -5,7 +5,7 @@ on:
   schedule:
     - cron: '0 6 * * *'
   
-  # Gatilho manual para podermos testar !
+  # Gatilho manual para podermos testar agora mesmo!
   workflow_dispatch: 
 
 jobs:
@@ -14,10 +14,10 @@ jobs:
 
     steps:
       - name: Passo 1 - Clonar o Repositório
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Passo 2 - Configurar o Ambiente Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
