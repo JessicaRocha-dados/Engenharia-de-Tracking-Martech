@@ -1,0 +1,52 @@
+name: Orquestração Diária - Pipeline de Dados 
+
+# O Gatilho: Roda todos os dias às 03:00 da manhã (Horário de Brasília) -> 06:00 UTC
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  
+  # Gatilho manual para podermos testar!
+  workflow_dispatch: 
+
+jobs:
+  executar_pipeline_completa:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Passo 1 - Clonar o Repositório
+        uses: actions/checkout@v3
+
+      - name: Passo 2 - Configurar o Ambiente Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Passo 3 - Instalar Dependências (BigQuery, Pandas)
+        run: |
+          pip install google-cloud-bigquery pandas db-dtypes
+          echo "Bibliotecas instaladas com sucesso."
+
+      - name: Passo 4 - Configurar Credenciais do GCP Seguras
+        run: |
+          echo "${{ secrets.GCP_CREDENTIALS }}" > credenciais_gcp.json
+        
+      - name: Passo 5 - Executar Ingestão Bronze
+        run: |
+          echo "Simulando Ingestão de dados brutos na Camada Bronze..."
+          
+          # python Modulo_4_Engenharia_Analytics_BQ/script_ingestao.py
+          
+      - name: Passo 6 - Executar Limpeza Silver
+        run: |
+          echo "Iniciando transformação e limpeza na Camada Silver..."
+          # python Modulo_4_Engenharia_Analytics_BQ/dia47_limpeza_silver.py
+
+      - name: Passo 7 - Circuit Breaker e Camada Gold
+        run: |
+          echo "Iniciando testes de qualidade da Camada Gold..."
+          python Modulo_4_Engenharia_Analytics_BQ/dia49_validacao_gold.py
+          
+      - name: Passo 8 - Limpeza de Segurança
+        run: |
+          rm -f credenciais_gcp.json
+          echo "Pipeline orquestrada concluída e credenciais apagadas!"
