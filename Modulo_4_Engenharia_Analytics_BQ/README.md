@@ -379,7 +379,7 @@ O resultado foi validado em tempo real: o painel do Google Analytics passou a co
 
 ## 3. Conclusão da Etapa
 
-Com as validações concluídas, a arquitetura de dados do laboratório atinge um patamar avançado de engenharia de tracking. O pipeline agora garante rastreamento de conversões sem perda de dados, conformidade técnica com o tratamento de IPs e armazenamento imutável pronto para alimentar modelos de atribuição e dashboards executivos.
+Com as validações concluídas, a arquitetura de dados do laboratório atinge um patamar avançado de engenharia de tracking. O pipeline agora garante rastreamento de conversões sem perda de dados, conformidade técnica com o tratamento de IPs e um armazenamento que preserva o dado original, pronto para alimentar modelos de atribuição e dashboards executivos.
 
 ---
 
@@ -395,8 +395,7 @@ Nesta fase, focamos nos conceitos como:
 ### 2. Etapas de Implementação
 
 **Passo 1: Estabelecimento da Camada Bronze**
-Importamos o dataset real (`dia46_bronze_eventos_ga4.csv`). O dado foi mantido estritamente em seu estado bruto (ex: a coluna `event_date` armazenada nativamente como número inteiro `YYYYMMDD` pela API do Google), respeitando a regra fundamental de imutabilidade do Data Lakehouse.
-
+Importamos o dataset real (dia46_bronze_eventos_ga4.csv). O dado foi mantido estritamente em seu estado bruto (ex: a coluna event_date armazenada nativamente como número inteiro YYYYMMDD pela API do Google), respeitando a regra fundamental de preservar o dado original
 ![Camada Bronze - Dados Brutos](dia46-01-dados-brutos-bronze.png)
 
 **Passo 2**:
@@ -405,13 +404,13 @@ Desenvolvemos o script de leitura (`dia46_ingestao_bronze.py`) para consumir os 
 ![Script de Ingestão](dia46-02-script-ingestao-bronze.png)
 
 ### 3. Conclusão e Impacto Arquitetural 
-O desenvolvimento deste script consolida a base de um Data Lakehouse moderno. A decisão de extrair os eventos do GA4 e armazená-los estritamente em seu estado bruto (Camada Bronze) materializa a transição do padrão ETL legado para o **ELT**. Utilizando Python e Pandas para uma ingestão em lote (Batch), eliminamos a dependência de servidores de transformação rodando ininterruptamente. Essa abordagem atende diretamente aos princípios de **FinOps**, otimizando os custos computacionais da nuvem.
+O desenvolvimento deste script consolida a base de uma arquitetura medalhão sobre BigQuery. A decisão de extrair os eventos do GA4 e armazená-los estritamente em seu estado bruto (Camada Bronze) materializa a transição do padrão ETL legado para o ELT. Utilizando Python e Pandas para uma ingestão em lote (Batch), eliminamos a dependência de servidores de transformação rodando ininterruptamente. Essa abordagem atende diretamente aos princípios de FinOps, otimizando os custos computacionais da nuvem.
 
 ---
 
 ###  Governança de Dados e Rastreabilidade (Data Lineage)
 
-Durante a revisão estrutural da Camada Bronze, identifiquei a necessidade técnica de implementar metadados de controle para garantir a rastreabilidade no Data Lakehouse. Com essa atualização no código, o pipeline registra de forma autônoma **quando** e **de onde** cada linha de dado foi extraída.
+Durante a revisão estrutural da Camada Bronze, identifiquei a necessidade técnica de implementar metadados de controle para garantir a rastreabilidade na arquitetura medalhão sobre BigQuery. Com essa atualização no código, o pipeline registra de forma autônoma quando e de onde cada linha de dado foi extraída.
 
 Através do Pandas, injetei duas novas colunas no momento exato da ingestão:
 * `_ingestion_timestamp`: Captura a data e hora exatas da execução via biblioteca `datetime`.
@@ -425,7 +424,7 @@ Abaixo, a demonstração da implementação no código e a validação das colun
 ---
 ### DIA 47 - Camada Silver: Limpeza, Tipagem e Data Quality
 
-Com a ingestão bruta garantida na Camada Bronze, a etapa seguinte do pipeline ELT consistiu em higienizar o dataset do GA4, aplicando regras de qualidade de dados (*Data Quality*) através da biblioteca Pandas. O objetivo desta camada é refinar o dado, entregando uma base estruturada, livre de inconsistências e pronta para cruzamentos seguros no Data Lakehouse.
+Com a ingestão bruta garantida na Camada Bronze, a etapa seguinte do pipeline ELT consistiu em higienizar o dataset do GA4, aplicando regras de qualidade de dados (Data Quality) através da biblioteca Pandas. O objetivo desta camada é refinar o dado, entregando uma base estruturada, livre de inconsistências e pronta para cruzamentos seguros na arquitetura medalhão sobre BigQuery.
 
 As seguintes transformações foram aplicadas no script `dia47_limpeza_silver.py`:
 * **Conversão de Tipagem:** A coluna `event_date` (extraída da API como número inteiro) foi convertida para o formato padrão de banco de dados `datetime64[ns]` (`YYYY-MM-DD`), essencial para filtros temporais analíticos.
