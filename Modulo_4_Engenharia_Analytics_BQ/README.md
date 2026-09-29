@@ -639,9 +639,100 @@ Histórico do workflow no GitHub Actions com as execuções seguintes também co
 
 ---
 
-## Limitações e próximos passos
-- Bronze e Silver usam `if_exists='replace'` (recarga completa, sem histórico). Próximo passo: carga incremental.
-- A Silver roda em Pandas, em uma única máquina. Próximo passo: PySpark.
-- O teste de qualidade usa `assert`. Próximo passo: exceções, logs e alertas.
-- No GitHub Actions roda a validação da Gold; ingestão e limpeza rodam localmente (etapas simuladas no workflow).
+#  MELHORIAS NO PROJETO: CICLO DE EVOLUÇÃO E DATAOPS
 
+Para garantir que este projeto evolui com as melhores práticas de Engenharia de Dados e metodologias ágeis, iniciamos um ciclo de melhorias contínuas estruturado em *sprints*. O foco não é apenas o código, mas também a governança, o fluxo de trabalho colaborativo e a transparência técnica.
+
+
+## Melhoria 1: README Consistente e Fluxo de Equipe
+
+**Objetivo:** Estabelecer a verdade técnica na documentação, alinhando o README ao comportamento real do código, e consolidar o hábito de trabalhar com metodologias ágeis (Kanban, ramificações e *Pull Requests*).
+
+**O que foi implementado:**
+* **Gestão Ágil com Kanban:** Criamos um quadro Kanban integrado ao repositório (via *GitHub Projects*) e mapeamos nosso *backlog* com 8 *issues* estratégicas.
+* **Adoção de Git Flow:** Iniciamos o desenvolvimento criando uma ramificação isolada (`melhoria-1-readme`) para garantir a estabilidade da linha principal (`main`).
+* **Refatoração Semântica da Documentação:** Ajustamos termos conceituais para refletir a realidade do projeto.
+* **Automação de Tarefas via GitHub:** O *Pull Request* foi aberto utilizando a palavra-chave `Closes #1`, encerrando a *issue* automaticamente após a aprovação (Merge).
+
+### 📸 Provas Sociais e Evidências (Semana 1)
+
+**1. O Início: Organização Ágil e Backlog**
+*Planejamento visual das tarefas antes da execução.*
+![Quadro Kanban estruturado com o backlog do projeto](semana1-01-quadro-kanban.png)
+
+**2. O Meio: Integração Git e Kanban**
+*Uso de palavras-chave no PR para rastreabilidade.*
+![Abertura de Pull Request utilizando a palavra-chave Closes](semana1-02-pr-closes.png)
+
+**3. O Fim: Conclusão e Entrega da Melhoria**
+*Integração contínua finalizada na ramificação principal.*
+![Pull Request mesclado com sucesso e tarefa encerrada](semana1-03-pr-mesclado.png)
+
+---
+
+## Melhoria 2: Orquestração e Pipeline Real na Nuvem
+
+**Objetivo:** Eliminar a dependência de execuções locais e migrar a arquitetura completa (camadas Bronze, Silver e Gold) para rodar de forma 100% autônoma, sequencial e integrada na nuvem utilizando o GitHub Actions (CI/CD) e o Google BigQuery.
+
+---
+
+###  Raciocínio Arquitetural e Refatoração de Código
+
+Para transicionar de um ambiente local para a nuvem, a lógica de programação foi reescrita aplicando conceitos avançados de engenharia de dados, segurança e separação de responsabilidades:
+
+#### 1. Camada Bronze: Ingestão Dinâmica e Segura via API
+* Em vez de ler ficheiros CSV estáticos salvos na máquina local (o que engessava a pipeline), refatoramos o script para consultar diretamente a tabela bruta do Google Analytics no BigQuery. 
+* **A Implementação Técnica:** Utilizamos a tabela curinga `events_*` combinada com o filtro temporal `_TABLE_SUFFIX` para varrer apenas o intervalo de datas desejado. Para evitar vulnerabilidades de *SQL Injection*, aplicamos parâmetros seguros através do `bigquery.QueryJobConfig` e o método `.to_dataframe()` para transformar o resultado num DataFrame do Pandas. Por fim, injetamos metadados obrigatórios de governança (`_ingestion_timestamp` e `_source_file`) antes de carregar os dados na tabela definitiva da Camada Bronze via `pandas-gbq`.
+  
+![Trecho de código mostrando a refatoração da camada bronze](melhoria2-04-refatoracao-bronze.png)
+
+#### 2. Camada Silver: Qualidade de Dados e Tratamento de Nulos
+* O dado bruto é inerentemente sujo e instável. A camada Silver tem o papel crucial de aplicar regras de negócio, padronizar estruturas e garantir a tipagem correta para consumo analítico.
+* **A Implementação Técnica:** O script lê a tabela Bronze diretamente do BigQuery e aplica uma bateria de tratamentos utilizando o Pandas: conversão rigorosa da coluna de data (`event_date`) para o formato datetime usando `pd.to_datetime`, tratamento preventivo de valores ausentes (*NaN*) com `.fillna()` para evitar quebras em agregações futuras (atribuindo rótulos como `'NÃO INFORMADO'` ou `'ID_AUSENTE'`), e padronização de strings em caixa alta (`.str.upper()`). Após a limpeza, o dataset é persistido na tabela Silver com a mesma segurança de escrita (`to_gbq`).
+  
+![Trecho de código mostrando o tratamento da camada silver](melhoria2-05-refatoracao-silver.png)
+
+#### 3. Camada Gold: Separação Estrita de Responsabilidades (Python + SQL)
+* Uma boa prática de engenharia é não misturar a regra de negócio analítica (cálculos de métricas, tabelas fato/dimensão) dentro do código de orquestração em Python. O Python deve apenas orquestrar; quem modela o dado é o SQL.
+* **A Implementação Técnica:** Criamos um script orquestrador (`dia50_gold.py`) extremamente limpo e modular. Ele utiliza a função nativa do Python `open().read()` para ler de forma dinâmica um arquivo `.sql` externo que contém a modelagem de negócios, enviando-o em seguida para execução no BigQuery (`client.query(sql).result()`). Isso garante que, se a regra analítica mudar no futuro, alteramos apenas o ficheiro SQL sem tocar no código de infraestrutura em Python.
+  
+![Trecho de código mostrando a execução do arquivo SQL na camada gold](melhoria2-06-codigo-gold.png)
+
+
+###  Contratempos, Diagnóstico e Solução (Troubleshooting detalhado de CI/CD)
+
+A transição de um ambiente local para um pipeline automatizado na nuvem expõe desafios arquiteturais que exigem rigor técnico e capacidade de investigação. Abaixo, detalhamos o raciocínio aplicado em cada fase da nossa resolução de problemas:
+
+#### 1. A Implementação Inicial e o Gatilho da Mudança
+* Com os scripts refatorados localmente, o primeiro passo de governança foi consolidar as alterações de código na ramificação principal (`main`) de forma limpa, garantindo a rastreabilidade através de um Pull Request formal.
+* **Execução:** Validamos a árvore de código e efetuamos o *merge* da *feature* para o repositório central.
+  
+![Pull Request da pipeline real fundido com sucesso](melhoria2-07-pr-pipeline-real.png)
+
+#### 2. O Desafio: A Falha na Execução Automatizada (#12)
+*  O verdadeiro teste de CI/CD acontece no ambiente efêmero da nuvem. Ao acionar o workflow manualmente no GitHub Actions logo após o *merge*, a pipeline foi interrompida abruptamente, gerando um estado de **Fracasso (Exit Code 1)**. 
+* **A Reação:** Em vez de assumir um erro genérico, a abordagem de engenharia exigiu a inspeção imediata do console de logs para isolar o ponto exato da quebra estrutural.
+  
+![Visão geral do workflow indicando falha na execução](melhoria2-08-erro-workflow.png)
+
+#### 3. Diagnóstico Profundo : Análise de Causa Raiz
+* Expandimos os logs do workflow e mapeamos a execução passo a passo até o *Passo 7 (Camada Gold)*. O console retornou explicitamente um erro do tipo `FileNotFoundError: [Errno 2] No such file or directory: '.../gold_fato_eventos_marketing.sql'`.
+* **A Conclusão do Diagnóstico:** Compreendemos que o script Python dependia da leitura síncrona de um arquivo físico `.sql` localizado num diretório específico. Contudo, o container do runner no GitHub Actions inicializa a partir de um workspace limpo, e a ausência do arquivo mapeado na árvore de diretórios remota invalidou a execução da query, quebrando a pipeline na nuvem.
+  
+![Log detalhado mostrando o erro no passo da Camada Gold](melhoria2-09-log-erro-gold.png)
+
+#### 4. A Solução Estruturada: Aplicação de Hotfix via Git Workflow
+* Para corrigir o problema sem comprometer a estabilidade da branch principal, aplicamos o conceito de *Hotfix* utilizando boas práticas de controle de versão:
+  * **Passo A:** Criámos uma ramificação isolada dedicada à correção (`correcao-sql-gold`).
+  * **Passo B:** Utilizamos comandos de terminal (CLI) para estruturar corretamente o diretório faltante e posicionar o arquivo de modelagem SQL no local exato onde o script Python o procurava.
+  * **Passo C:** Documentámos a correção num novo Pull Request corretivo (`fix: adicionar arquivo SQL em falta na camada gold`) e efetuámos o *merge* controlado.
+    
+![Pull Request corretivo adicionando o ficheiro SQL](melhoria2-10-pr-hotfix-sql.png)
+
+#### 5. Validação Final: Sucesso Absoluto e Confiabilidade na Nuvem (#14)
+* Com o ambiente virtual e os arquivos locais totalmente sincronizados com o repositório remoto, reexecutamos o pipeline completo para testar a resiliência da infraestrutura.
+* **O Resultado:** A pipeline atravessou de forma 100% autônoma as etapas de autenticação segura via Secrets, a ingestão dinâmica da Camada Bronze, o tratamento de dados da Camada Silver e a modelagem externa da Camada Gold, finalizando com **Sucesso total em 46 segundos**. Esta validação corrobora a maturidade do processo de Engenharia de Dados implementado.
+ 
+![Workflow concluído com status de sucesso em todas as etapas](melhoria2-11-workflow-sucesso.png)
+
+---
