@@ -1,33 +1,44 @@
-from datetime import datetime
 import pandas as pd
 import os
+from datetime import datetime
+from google.cloud import bigquery
+
+# Garante que o script encontre as credenciais quando rodar no GitHub Actions
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "credenciais_gcp.json"
 
-print("--- DIA 46: Iniciando Pipeline ELT (Batch) ---")
-print("Conceito FinOps: Ingestão de dados reais extraídos do BigQuery sem transformação prévia (Camada Bronze).\n")
+print("Conectando ao BigQuery...")
+# Inicializa o cliente apontando para o seu projeto
+client = bigquery.Client(project='portifolio-martech')
 
-# Lendo o arquivo real extraído do GCP
-bq_df = pd.read_csv('dia46_bronze_eventos_ga4.csv')
+# Query de extração dos dados brutos do GA4
+query = """
+    SELECT event_date, event_timestamp, event_name,
+           user_pseudo_id, geo.country AS country
+    FROM `portifolio-martech.analytics_538183128.events_*`
+    WHERE _TABLE_SUFFIX BETWEEN @inicio AND @fim
+"""
 
-# --- GOVERNANÇA DE DADOS  ---
-# Adicionando metadados de controle da engenharia
-bq_df['_ingestion_timestamp'] = datetime.now()
-bq_df['_source_file'] = 'dia46_bronze_eventos_ga4.csv'
+# Configuração das datas para filtrar apenas o mês desejado e evitar tabelas intraday
+config = bigquery.QueryJobConfig(query_parameters=[
+    bigquery.ScalarQueryParameter('inicio', 'STRING', '20260901'),
+    bigquery.ScalarQueryParameter('fim', 'STRING', '20260930'),
+])
 
-print("Visão da Camada Lógica Bronze (Eventos Brutos - GA4):")
-# Selecionando colunas de negócio + metadados de engenharia
-print(bq_df[['event_date', 'event_name', 'user_pseudo_id',
-      'country', '_ingestion_timestamp', '_source_file']].head())
+print("Extraindo dados do GA4...")
+# Executa a query e transforma em DataFrame
+bq_df = client.query(query, job_config=config).to_dataframe()
 
-print("\n--- Ponto de Atenção Arquitetural ---")
-print("Observe que o 'event_date' veio nativamente como número inteiro (ex: 20260914) da API do Google.")
-print("Na Arquitetura Medalhão, a Camada Bronze DEVE manter o dado no seu estado original.")
-print("A limpeza e conversão para formato de data (YYYY-MM-DD) ocorrerá apenas na Camada Silver, usando poder computacional sob demanda.")
+print("Adicionando metadados da Camada Bronze...")
+# Adiciona as colunas de metadados obrigatórias
+bq_df['_ingestion_timestamp'] = pd.to_datetime(datetime.now())
+bq_df['_source_file'] = 'API_GA4_BigQuery'
 
-print("\nEnviando dados reais para a Camada Bronze no BigQuery...")
+print("Carregando tabela no BigQuery...")
+# Salva o DataFrame na camada Bronze (usando replace conforme a nossa limitação documentada)
 bq_df.to_gbq(
-    destination_table='portifolio-martech.bronze.eventos_ga4',
+    destination_table='bronze.eventos_ga4',
     project_id='portifolio-martech',
     if_exists='replace'
 )
-print("Carga Bronze concluída com sucesso!")
+
+print("✅ Ingestão da Camada Bronze concluída com sucesso!")
