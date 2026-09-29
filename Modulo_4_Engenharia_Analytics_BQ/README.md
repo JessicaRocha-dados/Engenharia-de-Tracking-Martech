@@ -636,3 +636,12 @@ Execução concluída com status **Sucesso** (as anotações exibem apenas aviso
 Histórico do workflow no GitHub Actions com as execuções seguintes também concluídas com sucesso:
 
 ![Histórico de execuções com status de sucesso](sucesso-pipeline-final.png)
+
+---
+
+## Limitações e próximos passos
+- Bronze e Silver usam `if_exists='replace'` (recarga completa, sem histórico). Próximo passo: carga incremental.
+- A Silver roda em Pandas, em uma única máquina. Próximo passo: PySpark.
+- O teste de qualidade usa `assert`. Próximo passo: exceções, logs e alertas.
+- No GitHub Actions roda a validação da Gold; ingestão e limpeza rodam localmente (etapas simuladas no workflow).
+
