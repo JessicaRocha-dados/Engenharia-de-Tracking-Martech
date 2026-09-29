@@ -1,12 +1,12 @@
+
+import os
 from google.cloud import bigquery
-from google.oauth2 import service_account
 
 print("--- Iniciando Testes de Qualidade de Dados (Data Quality) ---")
 
-# 1. Autenticação
-credenciais = service_account.Credentials.from_service_account_file(
-    'credenciais_gcp.json')
-client = bigquery.Client(credentials=credenciais, project='portifolio-martech')
+# 1. Autenticação (Ajustada para o GitHub Actions)
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "credenciais_gcp.json"
+client = bigquery.Client(project='portifolio-martech')
 
 # 2. Definição da tabela
 tabela_gold = "portifolio-martech.gold.fato_eventos_marketing"
@@ -16,8 +16,6 @@ print(f" Validando a tabela: {tabela_gold}...\n")
 # TESTE 1: Integridade Técnica (Granularidade Duplicada)
 # ==========================================================
 
-# Chave primária composta é (data_evento, pais)
-# OBS: Não podem existir duas linhas com o mesmo país no mesmo dia.
 query_duplicatas = f"""
     SELECT COUNT(*) as qtd_duplicatas
     FROM (
@@ -37,7 +35,6 @@ print("✅ Teste 1 (Integridade Técnica): Aprovado. Granularidade correta, sem 
 # ==============================================
 # TESTE 2: Regra de Negócio (Métricas Negativas)
 # ==============================================
-# OBS: O total de interações e de usuários únicos jamais pode ser menor que zero.
 
 query_negativo = f"""
     SELECT COUNT(*) as qtd_erros
