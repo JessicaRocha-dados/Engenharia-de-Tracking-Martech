@@ -736,3 +736,43 @@ A transição de um ambiente local para um pipeline automatizado na nuvem expõe
 ![Workflow concluído com status de sucesso em todas as etapas](melhoria2-11-workflow-sucesso.png)
 
 ---
+
+## Melhoria 3: Carga Incremental, Idempotência e Testes de Qualidade
+
+Dando continuidade aos meus estudos e prática no desenvolvimento de lógicas em Python e SQL, nesta etapa o foco foi evoluir o pipeline para um padrão mais próximo do mercado. O objetivo era implementar cargas incrementais, garantir a idempotência dos dados e melhorar o sistema de validação da Camada Gold.
+
+Durante o desenvolvimento, enfrentei alguns desafios técnicos interessantes que me ajudaram a entender melhor o funcionamento do BigQuery e as boas práticas de Engenharia de Dados. Abaixo, documento os problemas que surgiram e como foram solucionados.
+
+### 1. Carga Incremental e o Desafio do Sandbox
+**O Problema:** 
+Inicialmente, a ideia era usar comandos DML (`DELETE` + `INSERT`) para garantir que os dados de um dia fossem apagados antes de inserir os novos, evitando duplicidade (idempotência). Porém, como estou a utilizar o modo Sandbox (gratuito) do Google Cloud, o BigQuery bloqueia a execução de comandos DML (`403 Forbidden`). 
+
+**A Solução:**
+Para contornar essa limitação técnica sem perder a idempotência, estudei e implementei o uso de **Decoradores de Partição**. No script em Python, formatei a data de ingestão e anexei ao nome da tabela de destino (ex: `eventos_ga4$20261001`). Usando o modo `WRITE_TRUNCATE`, o BigQuery sobrescreve **apenas** a partição daquele dia específico. 
+
+*Erro de conflito de partição:* Na Camada Gold, enfrentei um erro (`400 BadRequest`) pois tentei inserir dados de setembro numa partição de outubro. A solução foi criar uma nova coluna `data_ingestao` usando SQL e configurar o particionamento do BigQuery para se basear nela, garantindo a rastreabilidade perfeita.
+
+![Carga Incremental e Idempotente](carga-incremental-idempotente.png)
+
+### 2. O Valor dos Nulos (Tratamento na Camada Gold)
+**O Problema:**
+Na etapa anterior (Camada Silver), o pipeline estava preenchendo os IDs de utilizadores vazios com a string `"ID_AUSENTE"`. O problema dessa abordagem é que, ao chegar na Camada Gold, uma query que contasse usuários únicos (`COUNT(DISTINCT user_pseudo_id)`) consideraria todos os eventos anônimos como sendo de um único super-usuário chamado "ID_AUSENTE", distorcendo as métricas de marketing.
+
+**A Solução:**
+A melhor prática é deixar o nulo continuar sendo `NULL`. Removi o preenchimento forçado no script Python da Camada Silver. Em seguida, atualizei o código SQL da Camada Gold para incluir uma métrica específica para navegações anônimas usando `COUNTIF(user_pseudo_id IS NULL) AS eventos_sem_id`. Assim, os cálculos de usuários únicos ficam exatos e ganhamos visibilidade sobre o tráfego sem rastreio.
+
+![Métrica de Eventos sem ID na Camada Gold](tratamento-nulos-camada-gold.png)
+
+### 3. Validação de Qualidade Multi-erros
+**O Problema:**
+O antigo script de validação verificava os testes um a um. Se a tabela estivesse vazia, ele retornava um erro e parava a execução. Isso é ineficiente porque se houvesse falhas de duplicidade e frescor ao mesmo tempo, eu teria que rodar o script várias vezes para descobrir cada erro individualmente.
+
+**A Solução:**
+Refatorei o código Python (`dia49_validacao_gold.py`) criando um dicionário de testes (tabela vazia, chaves nulas, frescor e duplicidade). O script agora executa todas as consultas SQL em sequência, guarda os resultados num array e, apenas no final, reporta o panorama completo. Se houver mais de um erro, ele lista todos de uma vez, otimizando muito o tempo de *debug* e garantindo a confiabilidade dos dados para análise.
+
+![Logs da Validação de Qualidade Multi-erros](validacao-qualidade-multi-erros.png)
+
+### 4. Gestão Ágil com GitHub Projects
+Para manter a organização das tarefas, continuo a utilizar o Kanban do GitHub Projects. Todo o código desta semana foi versionado numa *branch* separada e, através de um Pull Request com a tag `Closes #3`, o card da tarefa foi movido automaticamente para a coluna "Feito" (Done), simulando o fluxo de integração contínua e gestão ágil.
+
+![Automação do Card no Kanban](automacao-issue-kanban.png)
