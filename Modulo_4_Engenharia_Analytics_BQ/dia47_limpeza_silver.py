@@ -1,50 +1,48 @@
 import pandas as pd
 import os
+from datetime import datetime
 from google.cloud import bigquery
 
+# Credenciais
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "credenciais_gcp.json"
-
-print("--- DIA 47: Iniciando Pipeline ELT - Camada Silver ---")
-print("Objetivo: Limpeza, tipagem e padronização (Data Quality).\n")
-
-# 1. EXTRAÇÃO: Lendo da Camada Bronze direto do BigQuery
-print("Lendo dados da camada Bronze no BigQuery...")
 client = bigquery.Client(project='portifolio-martech')
-df_silver = client.query(
-    "SELECT * FROM `portifolio-martech.bronze.eventos_ga4`").to_dataframe()
 
-print("1. Visão do Dado Bruto (Bronze) antes da limpeza:")
-print(df_silver[['event_date', 'country', 'user_pseudo_id']].head(3))
-print("\nIniciando transformações...\n")
+hoje = datetime.now()
+data_alvo = hoje.date()
+particao_hoje = hoje.strftime('%Y%m%d')
 
-# 2. TRANSFORMAÇÃO: Camada Silver
+print(f"Extraindo dados da Bronze para a data alvo: {data_alvo}...")
+# Lemos apenas os dados inseridos hoje (Carga Incremental)
+query = f"""
+    SELECT *
+    FROM `portifolio-martech.bronze.eventos_ga4`
+    WHERE _ingestion_date = '{data_alvo}'
+"""
+df_silver = client.query(query).to_dataframe()
 
-# A. Conversão de Tipagem (Data)
+print("Aplicando limpeza e regras de qualidade (Camada Silver)...")
+# Converte a data do evento para o formato correto datetime
 df_silver['event_date'] = pd.to_datetime(
-    df_silver['event_date'].astype(str), format='%Y%m%d')
+    df_silver['event_date'], format='%Y%m%d')
 
-# B. Tratamento de Nulos (NaN)
-df_silver['country'] = df_silver['country'].fillna('NÃO INFORMADO')
-df_silver['user_pseudo_id'] = df_silver['user_pseudo_id'].fillna('ID_AUSENTE')
+#  A linha que preenchia user_pseudo_id com 'ID_AUSENTE' foi removida!
+# Deixamos o ID como nulo para a camada Gold contar os eventos anônimos corretamente.
 
-# C. Padronização de Strings
-df_silver['country'] = df_silver['country'].str.upper()
+# Tratamento de nulos em outras colunas e padronização
+df_silver['country'] = df_silver['country'].fillna('NÃO INFORMADO').str.upper()
+df_silver['event_name'] = df_silver['event_name'].str.upper()
 
-print("---------------------------------------------------")
-print("2. Visão do Dado Limpo (Silver) após a limpeza:")
-print(df_silver[['event_date', 'country', 'user_pseudo_id']].head(3))
-print("\nTipagem atual da coluna event_date:", df_silver['event_date'].dtype)
+print("Carregando tabela no BigQuery (Silver - Modo Sandbox)...")
+# Usamos o decorador de partição para sobrescrever apenas a "gaveta" de hoje
+tabela_destino = f'portifolio-martech.silver.eventos_ga4${particao_hoje}'
 
-# Adicionando as colunas de governança de dados
-print(df_silver[['event_date', 'country', 'user_pseudo_id',
-      '_ingestion_timestamp', '_source_file']].head(3))
-print("\nTipagem atual da coluna event_date:", df_silver['event_date'].dtype)
-
-# 3. CARGA: Salvando o resultado direto no BigQuery
-print("\nEnviando dados tratados para a Camada Silver no BigQuery...")
-df_silver.to_gbq(
-    destination_table='silver.eventos_ga4',
-    project_id='portifolio-martech',
-    if_exists='replace'
+config_carga = bigquery.LoadJobConfig(
+    write_disposition='WRITE_TRUNCATE',
+    time_partitioning=bigquery.TimePartitioning(field='_ingestion_date'),
 )
-print("Carga Silver concluída com sucesso!")
+
+client.load_table_from_dataframe(
+    df_silver, tabela_destino, job_config=config_carga
+).result()
+
+print("✅ Limpeza e Carga Incremental da Camada Silver concluídas com sucesso!")

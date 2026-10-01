@@ -1,8 +1,10 @@
-CREATE OR REPLACE TABLE `portifolio-martech.gold.fato_eventos_marketing` AS
-SELECT
-    DATE(event_date) AS data_evento,
+SELECT 
+    event_date AS data_evento, 
     country AS pais,
+    COUNT(DISTINCT user_pseudo_id) AS total_usuarios_unicos, 
     COUNT(event_name) AS total_interacoes,
-    COUNT(DISTINCT user_pseudo_id) AS total_usuarios_unicos
+    COUNTIF(user_pseudo_id IS NULL) AS eventos_sem_id,
+    DATE(@data_alvo) AS data_ingestao
 FROM `portifolio-martech.silver.eventos_ga4`
-GROUP BY data_evento, pais;
+WHERE _ingestion_date = DATE(@data_alvo)
+GROUP BY event_date, country, data_ingestao;
