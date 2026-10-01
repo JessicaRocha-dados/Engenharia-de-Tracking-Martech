@@ -18,27 +18,38 @@ query = """
     WHERE _TABLE_SUFFIX BETWEEN @inicio AND @fim
 """
 
-# Configuração das datas para filtrar apenas o mês desejado e evitar tabelas intraday
-config = bigquery.QueryJobConfig(query_parameters=[
+# Configuração das datas para filtrar apenas o mês desejado
+config_extracao = bigquery.QueryJobConfig(query_parameters=[
     bigquery.ScalarQueryParameter('inicio', 'STRING', '20260901'),
     bigquery.ScalarQueryParameter('fim', 'STRING', '20260930'),
 ])
 
 print("Extraindo dados do GA4...")
 # Executa a query e transforma em DataFrame
-bq_df = client.query(query, job_config=config).to_dataframe()
+bq_df = client.query(query, job_config=config_extracao).to_dataframe()
 
 print("Adicionando metadados da Camada Bronze...")
-# Adiciona as colunas de metadados obrigatórias
-bq_df['_ingestion_timestamp'] = pd.to_datetime(datetime.now())
+hoje = datetime.now()
+bq_df['_ingestion_timestamp'] = pd.to_datetime(hoje)
 bq_df['_source_file'] = 'API_GA4_BigQuery'
+bq_df['_ingestion_date'] = hoje.date()
 
-print("Carregando tabela no BigQuery...")
-# Salva o DataFrame na camada Bronze (usando replace conforme a nossa limitação documentada)
-bq_df.to_gbq(
-    destination_table='bronze.eventos_ga4',
-    project_id='portifolio-martech',
-    if_exists='replace'
+print("Carregando tabela no BigQuery (Idempotência via Decorador de Partição)...")
+# Formata a data de hoje para o formato YYYYMMDD (ex: 20261001)
+particao_hoje = hoje.strftime('%Y%m%d')
+
+# No modo Sandbox, anexamos o decorador de partição ($YYYYMMDD) ao nome da tabela.
+tabela_destino = f'portifolio-martech.bronze.eventos_ga4${particao_hoje}'
+
+# Usamos WRITE_TRUNCATE. Como especificamos a partição alvo acima,
+# ele recria APENAS os dados de hoje, sem apagar o resto do histórico e sem precisar de DELETE!
+config_carga = bigquery.LoadJobConfig(
+    write_disposition='WRITE_TRUNCATE',
+    time_partitioning=bigquery.TimePartitioning(field='_ingestion_date'),
 )
 
-print("✅ Ingestão da Camada Bronze concluída com sucesso!")
+client.load_table_from_dataframe(
+    bq_df, tabela_destino, job_config=config_carga
+).result()
+
+print("✅ Ingestão Incremental da Camada Bronze concluída com sucesso!")

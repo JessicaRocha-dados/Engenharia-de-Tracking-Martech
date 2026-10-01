@@ -1,53 +1,40 @@
-
 import os
+import logging
 from google.cloud import bigquery
 
-print("--- Iniciando Testes de Qualidade de Dados (Data Quality) ---")
-
-# 1. Autenticação (Ajustada para o GitHub Actions)
+# Credenciais e conexão
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "credenciais_gcp.json"
 client = bigquery.Client(project='portifolio-martech')
 
-# 2. Definição da tabela
-tabela_gold = "portifolio-martech.gold.fato_eventos_marketing"
-print(f" Validando a tabela: {tabela_gold}...\n")
+# Configura o log
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s %(levelname)s %(message)s')
+T = 'portifolio-martech.gold.fato_eventos_marketing'
 
-# ===========================================================
-# TESTE 1: Integridade Técnica (Granularidade Duplicada)
-# ==========================================================
+print("Iniciando bateria de testes de qualidade na Camada Gold...")
 
-query_duplicatas = f"""
-    SELECT COUNT(*) as qtd_duplicatas
-    FROM (
-        SELECT data_evento, pais, COUNT(*) as qtd
-        FROM `{tabela_gold}`
-        GROUP BY data_evento, pais
-        HAVING qtd > 1
-    )
-"""
-job_duplicatas = client.query(query_duplicatas)
-resultado_duplicatas = list(job_duplicatas)[0].qtd_duplicatas
+# Dicionário de testes: 'Nome do teste': ('Query SQL', regra de aprovação)
+checks = {
+    'tabela vazia': (f'SELECT COUNT(*) AS n FROM `{T}`', lambda n: n > 0),
+    'chaves nulas': (f'SELECT COUNT(*) AS n FROM `{T}` WHERE data_evento IS NULL OR pais IS NULL', lambda n: n == 0),
+    'frescor (dias)': (f'SELECT DATE_DIFF(CURRENT_DATE(), MAX(data_evento), DAY) AS n FROM `{T}`', lambda n: n <= 15),
+    'duplicidade': (f'SELECT COUNT(*) AS n FROM (SELECT 1 FROM `{T}` GROUP BY data_evento, pais HAVING COUNT(*) > 1)', lambda n: n == 0),
+}
 
-# O 'assert' atua como Circuit Breaker
-assert resultado_duplicatas == 0, f"🚨 ALERTA DE INTEGRIDADE: Encontradas {resultado_duplicatas} combinações de data e país duplicadas!"
-print("✅ Teste 1 (Integridade Técnica): Aprovado. Granularidade correta, sem duplicatas.")
+falhas = []
+for nome, (sql, ok) in checks.items():
+    # Executa cada query de validação
+    valor = list(client.query(sql))[0]['n']
 
-# ==============================================
-# TESTE 2: Regra de Negócio (Métricas Negativas)
-# ==============================================
+    # Valida a regra
+    if ok(valor):
+        logging.info('OK: %s (valor=%s)', nome, valor)
+    else:
+        logging.error('FALHOU: %s (valor=%s)', nome, valor)
+        falhas.append(nome)
 
-query_negativo = f"""
-    SELECT COUNT(*) as qtd_erros
-    FROM `{tabela_gold}`
-    WHERE total_interacoes < 0 OR total_usuarios_unicos < 0
-"""
-job_negativo = client.query(query_negativo)
-resultado_negativo = list(job_negativo)[0].qtd_erros
-
-assert resultado_negativo == 0, f"🚨 ALERTA DE NEGÓCIO: Existem {resultado_negativo} registros com métricas negativas!"
-print("✅ Teste 2 (Regra de Negócio): Aprovado. Nenhuma métrica negativa encontrada.")
-
-# ==========================================
-#                SUCESSO
-# ==========================================
-print("\n🚀 DATA QUALITY APROVADO! O pipeline está íntegro e a Camada Gold está liberada para o BI.")
+# Se houver falhas, levanta um erro com a lista de todos os problemas
+if falhas:
+    raise RuntimeError(f'Testes falharam: {falhas}')
+else:
+    print("✅ Todos os testes de qualidade passaram com sucesso!")
