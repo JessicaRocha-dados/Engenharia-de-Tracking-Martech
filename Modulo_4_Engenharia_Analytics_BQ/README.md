@@ -807,6 +807,7 @@ erDiagram
   DIM_PAIS {
     string pais PK
   }
+```
 
 ### 2. Implementação do Modelo no BigQuery (DDL)
 
