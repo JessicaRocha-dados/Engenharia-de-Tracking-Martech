@@ -776,3 +776,92 @@ Refatorei o código Python (`dia49_validacao_gold.py`) criando um dicionário de
 Para manter a organização das tarefas, continuo a utilizar o Kanban do GitHub Projects. Todo o código desta semana foi versionado numa *branch* separada e, através de um Pull Request com a tag `Closes #3`, o card da tarefa foi movido automaticamente para a coluna "Feito" (Done), simulando o fluxo de integração contínua e gestão ágil.
 
 ![Automação do Card no Kanban](automacao-issue-kanban.png)
+
+--- 
+## Semana 4: Modelagem Dimensional (Modelo Estrela) e Camada Semântica
+
+Com os dados da Camada Gold higienizados e sendo atualizados de forma incremental, o próximo passo lógico na engenharia analítica foi estruturar esses dados para o consumo final pelas ferramentas de BI (Business Intelligence) e times de negócios. 
+
+Para isso, transformei a tabela principal em um **Modelo Dimensional (Star Schema)** e criei uma **Camada Semântica** através de Views.
+
+### 1. O Desenho do Modelo (Star Schema)
+Para organizar o contexto das análises, separei os dados em uma Tabela Fato e Tabelas Dimensão. Abaixo está o diagrama de relacionamento (ER) da nossa arquitetura:
+
+```mermaid
+erDiagram
+  DIM_DATA ||--o{ FATO_EVENTOS : data_evento
+  DIM_PAIS ||--o{ FATO_EVENTOS : pais
+  
+  FATO_EVENTOS {
+    date data_evento FK
+    string pais FK
+    int total_usuarios_unicos
+    int total_interacoes
+  }
+  DIM_DATA {
+    date data_evento PK
+    int ano
+    int mes
+    string dia_semana
+  }
+  DIM_PAIS {
+    string pais PK
+  }
+
+### 2. Implementação do Modelo no BigQuery (DDL)
+
+Após definir o desenho arquitetural, o passo seguinte foi materializar estas estruturas no data warehouse. A estratégia adotada focou-se em aproveitar as funções nativas do BigQuery para gerar contexto e garantir governança na disponibilização dos dados. Abaixo estão as evidências da execução dos scripts e validação das tabelas.
+
+**A. Dimensão de Data (`dim_data`)**
+A dimensão de tempo é o eixo central de qualquer modelo analítico. Em vez de depender da importação de uma folha de cálculo estática externa, optei por criar um calendário contínuo de forma programática. Utilizei a função nativa `GENERATE_DATE_ARRAY` para criar o intervalo de datas e a função `EXTRACT` para derivar atributos descritivos (ano, mês e dia da semana). Isto garante que o modelo tem sempre as datas necessárias para suportar filtros temporais na ferramenta de BI.
+
+*Execução do código DDL gerando o calendário de forma dinâmica:*
+![Criação da dimensão de data](sql-criacao-dim-data.png)
+
+*Validação do esquema gerado:*
+![Resultado da dimensão de data](resultado-dim-data.png)
+
+
+**B. Dimensão de País (`dim_pais`)**
+Para a dimensão de localidade, o objetivo foi isolar os atributos descritivos geográficos. Utilizei a cláusula `DISTINCT` para varrer a camada Silver e extrair uma lista única consolidada de países. 
+
+*Nota de arquitetura:* Para o âmbito atual deste projeto e volume de dados, optei por utilizar o próprio nome do país como Chave Natural (Natural Key) para efetuar os cruzamentos. Como parte da minha evolução contínua em engenharia de dados, reconheço que em ambientes corporativos de larga escala a prática recomendada seria gerar uma Chave Substituta (Surrogate Key) numérica (ex: `id_pais`) para otimizar o processamento dos *joins* e reduzir o custo de armazenamento.
+
+*Extração de valores únicos para formar a tabela de contexto:*
+![Criação da dimensão de país](sql-criacao-dim-pais.png)
+
+*Validação da lista isolada de países:*
+![Resultado da dimensão de país](resultado-dim-pais.png)
+
+
+### 3. Construção da Camada Semântica (View)
+
+O último passo de engenharia antes da visualização final foi a criação de uma camada semântica. Em vez de expor a Tabela Fato e as suas complexidades diretamente ao Looker Studio, estabeleci uma *View* (`vw_usuarios_por_pais`) que atua como um contrato de dados.
+
+O racional desta etapa foi efetuar o cruzamento (`JOIN`) prévio entre a Fato e a `dim_data`, e renomear as colunas técnicas para nomenclaturas de negócio limpas e compreensíveis (por exemplo, traduzindo `total_usuarios_unicos` simplesmente para `usuarios_unicos`). Isto descentraliza a lógica técnica da ferramenta de BI e garante que a área de negócio consome os dados de forma intuitiva e à prova de erros.
+
+*Implementação da camada semântica via SQL:*
+![Criação da View Semântica](sql-criacao-view-semantica.png)
+
+*Esquema final simplificado e pronto para consumo pelo BI:*
+![Esquema da View Semântica](esquema-view-semantica.png)
+
+### 4. Consumo dos Dados e Visualização (Looker Studio)
+
+O objetivo final de uma arquitetura de dados bem desenhada é entregar valor e insights acionáveis para a área de negócios. Com o Modelo Estrela e a Camada Semântica estabelecidos, a etapa final consistiu em conectar o Google Looker Studio à nossa *View* (`vw_usuarios_por_pais`).
+
+**Raciocínio Analítico e UI/UX:**
+* **Governança e Performance:** Ao ligar o BI diretamente à Camada Semântica, garantimos que a ferramenta de visualização atua estritamente como uma camada de apresentação. O Looker Studio não precisa de processar agregações complexas ou *joins* pesados, pois essa carga computacional já foi resolvida e otimizada no BigQuery.
+* **Democratização dos Dados:** Os utilizadores de negócio têm acesso a métricas claras ("Utilizadores Únicos", "Interações") sem precisarem de compreender a complexidade do modelo de dados subjacente.
+* **Data Storytelling:** Adotei um design focado na clareza executiva. A utilização de um fundo em cinzento claro com componentes em formato de "cartões" (fundo branco, sem bordas e com cantos levemente arredondados), somada à tipografia *Montserrat*, reduz a carga cognitiva e direciona a atenção para onde realmente importa: as métricas de performance globais.
+
+*Resultado da conexão da Camada Semântica ao Looker Studio:*
+![Dashboard de Visão Geral de Tráfego alimentado pelo Modelo Estrela](dashboard-camada-semantica.png)
+
+### 5. Conceitos Teóricos Aplicados na Arquitetura
+
+Para garantir uma arquitetura de dados escalável e um *dashboard* de alta performance, apliquei conceitos fundamentais de Modelagem Dimensional nesta sprint:
+
+*   **Granularidade da Tabela Fato:** A granularidade define o nível de detalhe da nossa informação base. Neste projeto, a tabela `fato_eventos_marketing` tem uma granularidade diária por país (uma linha por data e por país). Esta agregação reduz drasticamente o volume de dados em relação à Camada Silver (onde poderíamos ter milhares de eventos de cliques por minuto), garantindo respostas instantâneas no Looker Studio.
+*   **Papel das Chaves Primárias (PK) e Estrangeiras (FK):** As Tabelas de Dimensão (`dim_data` e `dim_pais`) possuem **Chaves Primárias (PK)** únicas (a data ou o nome do país). A Tabela Fato, por sua vez, contém as **Chaves Estrangeiras (FK)** que apontam para essas dimensões. Este relacionamento garante a integridade referencial: a Fato apenas regista métricas para datas e países que realmente existem nas dimensões.
+*   **Normalização e Separação de Contexto (Star Schema):** O principal objetivo do Modelo Estrela é a separação clara de papéis. As **Dimensões** guardam o contexto descritivo (o "quando" e o "onde") uma única vez, evitando duplicação de texto e facilitando a manutenção (ex: se o nome de um país mudar, mudamos apenas numa linha da dimensão). Já a **Fato** é leve e estreita, guardando estritamente métricas aditivas (os números, o "quanto"). A Camada Semântica (`vw_usuarios_por_pais`) é o elo que desnormaliza isto tudo de forma controlada apenas para a visualização final no BI.
