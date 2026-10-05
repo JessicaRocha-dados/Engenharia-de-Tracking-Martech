@@ -13,8 +13,12 @@ particao_hoje = hoje.strftime('%Y%m%d')  # Formato YYYYMMDD para o Decorador
 
 print(f"Executando modelagem da Camada Gold para a data: {data_alvo}...")
 
-# Lendo da pasta sql
-with open('sql/gold_fato_eventos_marketing.sql', 'r') as file:
+# Lendo da pasta sql dinamicamente
+diretorio_atual = os.path.dirname(os.path.abspath(__file__))
+caminho_sql = os.path.join(diretorio_atual, 'sql',
+                           'gold_fato_eventos_marketing.sql')
+
+with open(caminho_sql, 'r') as file:
     sql_template = file.read()
 
 sql = sql_template.replace('@data_alvo', f"'{data_alvo}'")
