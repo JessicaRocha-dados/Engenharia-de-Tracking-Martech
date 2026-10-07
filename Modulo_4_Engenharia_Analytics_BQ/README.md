@@ -866,3 +866,42 @@ Para garantir uma arquitetura de dados escalável e um *dashboard* de alta perfo
 *   **Granularidade da Tabela Fato:** A granularidade define o nível de detalhe da nossa informação base. Neste projeto, a tabela `fato_eventos_marketing` tem uma granularidade diária por país (uma linha por data e por país). Esta agregação reduz drasticamente o volume de dados em relação à Camada Silver (onde poderíamos ter milhares de eventos de cliques por minuto), garantindo respostas instantâneas no Looker Studio.
 *   **Papel das Chaves Primárias (PK) e Estrangeiras (FK):** As Tabelas de Dimensão (`dim_data` e `dim_pais`) possuem **Chaves Primárias (PK)** únicas (a data ou o nome do país). A Tabela Fato, por sua vez, contém as **Chaves Estrangeiras (FK)** que apontam para essas dimensões. Este relacionamento garante a integridade referencial: a Fato apenas regista métricas para datas e países que realmente existem nas dimensões.
 *   **Normalização e Separação de Contexto (Star Schema):** O principal objetivo do Modelo Estrela é a separação clara de papéis. As **Dimensões** guardam o contexto descritivo (o "quando" e o "onde") uma única vez, evitando duplicação de texto e facilitando a manutenção (ex: se o nome de um país mudar, mudamos apenas numa linha da dimensão). Já a **Fato** é leve e estreita, guardando estritamente métricas aditivas (os números, o "quanto"). A Camada Semântica (`vw_usuarios_por_pais`) é o elo que desnormaliza isto tudo de forma controlada apenas para a visualização final no BI.
+
+  ---
+
+  ### Idempotência Avançada e o Desafio do Sandbox (Full Refresh via API)
+
+**O Problema: Duplicidade na Camada Gold**
+Apesar de ter implementado a carga incremental e os decoradores de partição (`$YYYYMMDD`), identifiquei uma falha lógica durante execuções múltiplas num mesmo dia. O decorador estava a limpar e a sobrescrever apenas a "gaveta" (partição) do dia da execução. Se o script corresse novamente, e os dados da origem estivessem distribuídos por várias datas, o BigQuery criava registos duplicados nas partições de destino, falsificando as métricas no Looker Studio. 
+
+O sistema de testes de qualidade de dados (Circuit Breaker) atuou perfeitamente e interrompeu a pipeline ao detetar esta anomalia:
+
+![Erro no Teste de Duplicidade](02-pipeline-erro-teste-duplicidade.png)
+
+A raiz do problema estava no código SQL original, que utilizava um filtro temporal para inserir os dados de forma incremental, originando o *append* duplicado:
+
+![Código SQL Antigo com Bug Incremental](03-sql-camada-gold-incremental-bug.png)
+
+A solução para este cenário seria utilizar o comando `MERGE` (Upsert). Contudo, o plano **Sandbox do BigQuery bloqueia comandos DML** (Data Manipulation Language), devolvendo um erro *403 Forbidden*.
+
+**A Solução: Full Refresh via API (Pushdown)**
+Para garantir a idempotência absoluta sem quebrar as restrições do ambiente gratuito, refatorei a arquitetura para o padrão **Full Refresh**. As camadas Bronze e Silver mantêm-se incrementais (para poupar custos de leitura pesada), mas a Camada Gold passou a ser recriada do zero a cada execução, utilizando as configurações de sobrescrita nativa da API do BigQuery (`WRITE_TRUNCATE`).
+
+**Mudanças Implementadas no SQL:**
+
+![Novo SQL Full Refresh](04-sql-camada-gold-full-refresh.png)
+
+1. **Proteção contra Nulos (`IFNULL`):** Adição da função `IFNULL` na localização. Caso o GA4 falhe a captura de localização, o dado não quebra o BI, sendo agregado graciosamente como "Desconhecido".
+2. **Cálculo Dinâmico da Ingestão (`MAX`):** Em vez de injetar a data de forma externa via Python, o próprio SQL descobre a última data de atualização de cada agrupamento utilizando a função `MAX`.
+3. **Remoção de Filtros Temporais:** A cláusula `WHERE _ingestion_date` e a `data_ingestao` do `GROUP BY` foram eliminadas. A query agora varre a Camada Silver inteira, garantindo um agrupamento matemático perfeito.
+
+**Mudanças Implementadas no Orquestrador:**
+
+![Novo Python com Pushdown](05-python-camada-gold-pushdown.png)
+
+4. **Eliminação do Pandas (Pushdown):** No orquestrador Python, removi totalmente a dependência da biblioteca Pandas. Em vez de transferir *DataFrames* pesados através da rede, o Python agora utiliza a API `QueryJobConfig(write_disposition='WRITE_TRUNCATE')` para instruir o BigQuery a efetuar o processamento pesado e a substituição da tabela de forma nativa nos servidores do Google.
+
+**O Resultado:**
+O resultado é uma Camada Gold 100% idempotente, imensamente mais rápida (custos de rede e memória zero) e perfeitamente adaptada às limitações do plano Sandbox. A pipeline executa o *Full Refresh* de forma autónoma e foi validada com sucesso pelo sistema de qualidade em apenas 46 segundos:
+
+![Pipeline Executada com Sucesso e Idempotente](06-pipeline-sucesso-idempotente.png)
