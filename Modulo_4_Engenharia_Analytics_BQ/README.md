@@ -905,3 +905,18 @@ Para garantir a idempotência absoluta sem quebrar as restrições do ambiente g
 O resultado é uma Camada Gold 100% idempotente, imensamente mais rápida (custos de rede e memória zero) e perfeitamente adaptada às limitações do plano Sandbox. A pipeline executa o *Full Refresh* de forma autónoma e foi validada com sucesso pelo sistema de qualidade em apenas 46 segundos:
 
 ![Pipeline Executada com Sucesso e Idempotente](06-pipeline-sucesso-idempotente.png)
+
+### Validação Visual e Impacto no Negócio: O Resgate de Dados Históricos
+
+Após a implementação do padrão *Full Refresh* na Camada Gold, efetuei a validação da integridade dos dados diretamente no nosso dashboard do Looker Studio. A comparação entre o painel antigo e o novo revelou um achado crítico sobre a saúde da nossa pipeline:
+
+**O Cenário Anterior (Perda de Histórico):**
+No modelo incremental anterior, o dashboard apresentava um total de apenas **156 interações** (102 nos EUA, 46 no Brasil e 8 sem localização). Como o script SQL estava engessado a filtrar estritamente a data da execução da pipeline, qualquer evento do Google Analytics 4 que chegasse com atraso à Camada Silver (fenómeno comum em web analytics conhecido como *late-arriving data*) era sumariamente ignorado. A pipeline estava, silenciosamente, a perder dados históricos.
+
+**O Cenário Atual (Integridade Restaurada):**
+Com a nova arquitetura a efetuar a leitura completa (varrendo a Camada Silver de ponta a ponta a cada execução), o dashboard revelou a verdadeira dimensão do tráfego. Como destacado a vermelho na imagem abaixo, o número de Utilizadores Únicos manteve-se perfeitamente exato e estável (10 utilizadores no total, provando o sucesso do agrupamento matemático), mas o número de **interações saltou drasticamente para 1.092** (714 nos EUA, 322 no Brasil e 56 agregados graciosamente na nova categoria "Desconhecido").
+
+![Dashboard Atualizado com Dados Reais e Completos](07-dashboard-looker-studio-atualizado.png)
+
+**A Conclusão:**
+Este aumento expressivo de 156 para 1.092 interações não representa um erro de duplicação, mas sim o **resgate da integridade total dos dados**. O modelo *Full Refresh* nativo no BigQuery garantiu que todas as ações reais, independentemente do atraso de processamento na origem, fossem recuperadas e contabilizadas. A área de negócio tem agora a garantia de que as métricas apresentadas refletem 100% da realidade do comportamento dos utilizadores.
