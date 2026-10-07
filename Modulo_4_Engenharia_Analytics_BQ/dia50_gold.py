@@ -1,45 +1,32 @@
 import os
-import pandas as pd
-from datetime import datetime
 from google.cloud import bigquery
 
 # Credenciais
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "credenciais_gcp.json"
 client = bigquery.Client(project='portifolio-martech')
 
-hoje = datetime.now()
-data_alvo = hoje.strftime('%Y-%m-%d')  # Formato YYYY-MM-DD para o SQL
-particao_hoje = hoje.strftime('%Y%m%d')  # Formato YYYYMMDD para o Decorador
-
-print(f"Executando modelagem da Camada Gold para a data: {data_alvo}...")
+print("Executando modelagem da Camada Gold (Modo Full Refresh)...")
 
 # Lendo da pasta sql dinamicamente
 diretorio_atual = os.path.dirname(os.path.abspath(__file__))
-caminho_sql = os.path.join(diretorio_atual, 'sql',
-                           'gold_fato_eventos_marketing.sql')
+caminho_sql = os.path.join(diretorio_atual, 'sql', 'gold_fato_eventos_marketing.sql')
 
 with open(caminho_sql, 'r') as file:
-    sql_template = file.read()
+    sql = file.read()
 
-sql = sql_template.replace('@data_alvo', f"'{data_alvo}'")
+print("Enviando comando para o BigQuery processar...")
 
-df_gold = client.query(sql).to_dataframe()
+# Tabela de destino SEM o sufixo de partição sobrescrevendo tudo
+tabela_destino = 'portifolio-martech.gold.fato_eventos_marketing'
 
-# Converte as colunas de datas para o formato datetime do Pandas
-df_gold['data_evento'] = pd.to_datetime(df_gold['data_evento'])
-df_gold['data_ingestao'] = pd.to_datetime(df_gold['data_ingestao'])
-
-print("Carregando tabela no BigQuery (Gold - Modo Sandbox)...")
-tabela_destino = f'portifolio-martech.gold.fato_eventos_marketing${particao_hoje}'
-
-config_carga = bigquery.LoadJobConfig(
+# Configuração para sobrescrever a tabela inteira, mas mantendo a organização da partição
+config_carga = bigquery.QueryJobConfig(
+    destination=tabela_destino,
     write_disposition='WRITE_TRUNCATE',
-    time_partitioning=bigquery.TimePartitioning(
-        field='data_ingestao'),  # Alterado para a ingestão!
+    time_partitioning=bigquery.TimePartitioning(field='data_ingestao') 
 )
 
-client.load_table_from_dataframe(
-    df_gold, tabela_destino, job_config=config_carga
-).result()
+# Executa a query diretamente no BigQuery 
+client.query(sql, job_config=config_carga).result()
 
-print("✅ Camada Gold Incremental concluída com sucesso!")
+print("✅ Camada Gold (Full Refresh) concluída com sucesso! ")
