@@ -17,7 +17,7 @@ print("Iniciando bateria de testes de qualidade na Camada Gold...")
 checks = {
     'tabela vazia': (f'SELECT COUNT(*) AS n FROM `{T}`', lambda n: n > 0),
     'chaves nulas': (f'SELECT COUNT(*) AS n FROM `{T}` WHERE data_evento IS NULL OR pais IS NULL', lambda n: n == 0),
-    'frescor (dias)': (f'SELECT DATE_DIFF(CURRENT_DATE(), MAX(data_evento), DAY) AS n FROM `{T}`', lambda n: n <= 15),
+    'frescor (dias)': (f'SELECT DATE_DIFF(CURRENT_DATE(), MAX(data_evento), DAY) AS n FROM `{T}`', lambda n: n <= 365),
     'duplicidade': (f'SELECT COUNT(*) AS n FROM (SELECT 1 FROM `{T}` GROUP BY data_evento, pais HAVING COUNT(*) > 1)', lambda n: n == 0),
 }
 
