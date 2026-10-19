@@ -965,3 +965,133 @@ As manutenções realizadas nesta etapa consolidam uma visão madura sobre o cic
 3. **Cultura de DevOps e CI/CD:** A resposta rápida aos avisos de depreciação do GitHub Actions reforça que a Engenharia de Dados vai além da escrita de código (Python/SQL); ela exige uma manutenção contínua e proativa da infraestrutura *Cloud* para evitar o acumular de dívida técnica.
 
 Estes eventos elevam a maturidade do projeto, demonstrando não apenas capacidade de desenvolvimento, mas uma forte competência operacional na sustentação de arquiteturas de dados.
+
+---
+
+### 🟢 Atualização de Estabilidade 
+
+Após a refatoração para o modelo *Full Refresh* na Camada Gold, a calibração do teste de *Data Freshness* e a atualização das dependências do GitHub Actions, a nossa infraestrutura estabilizou completamente. 
+
+A pipeline já se encontra a rodar há dezenas de execuções consecutivas ao longo de vários dias sem apresentar qualquer falha. O fluxo trabalha de forma 100% autônoma, validando e processando os dados todos os dias no automático, provando a maturidade das nossas práticas de DataOps.
+
+![Pipeline Estável no GitHub Actions](00_pipeline_estavel_github.png)
+
+---- 
+
+## 🛠️ Resolução de Problemas: Idempotência, Circuit Breakers e CI/CD
+
+Antes de avançarmos para o processamento distribuído, foi necessário estabilizar a pipeline atual, resolvendo desafios de arquitetura e infraestrutura.
+
+### O Problema: Duplicidade na Camada Gold
+Apesar de ter implementado a carga incremental e os decoradores de partição (`$YYYYMMDD`), identifiquei uma falha lógica durante execuções múltiplas num mesmo dia. O decorador estava a limpar e a sobrescrever apenas a "gaveta" (partição) do dia da execução. Se o script corresse novamente, e os dados da origem estivessem distribuídos por várias datas, o BigQuery criava registos duplicados nas partições de destino, falsificando as métricas no Looker Studio. O sistema de testes de qualidade de dados (*Circuit Breaker*) atuou perfeitamente e interrompeu a pipeline ao detetar esta anomalia.
+
+### A Solução: Full Refresh via API (Pushdown)
+A solução ideal (MERGE/Upsert) é bloqueada no plano Sandbox do BigQuery (erro 403 Forbidden para DML). Para garantir a idempotência absoluta sem quebrar as restrições do ambiente gratuito, refatorei a arquitetura para o padrão Full Refresh:
+*   **Camadas Bronze e Silver:** Mantêm-se incrementais (para poupar custos de leitura pesada).
+*   **Camada Gold:** Passou a ser recriada do zero a cada execução, utilizando as configurações de sobrescrita nativa da API do BigQuery (`WRITE_TRUNCATE`).
+
+**Mudanças Implementadas no SQL:**
+1.  **Proteção contra Nulos (IFNULL):** Adição da função `IFNULL` na localização. Caso o GA4 falhe a captura, o dado não quebra o BI, sendo agregado como "Desconhecido".
+2.  **Cálculo Dinâmico da Ingestão (MAX):** O próprio SQL descobre a última data de atualização de cada agrupamento utilizando a função `MAX()`.
+3.  **Remoção de Filtros Temporais:** A query agora varre a Camada Silver inteira, garantindo um agrupamento matemático perfeito.
+
+**Mudanças Implementadas no Orquestrador:**
+*   **Eliminação do Pandas (Pushdown):** No orquestrador Python, removi totalmente a dependência da biblioteca Pandas. O Python agora utiliza a API `QueryJobConfig(write_disposition='WRITE_TRUNCATE')` para instruir o BigQuery a efetuar o processamento pesado de forma nativa. O resultado é uma Camada Gold 100% idempotente e mais rápida (custos de rede zero).
+
+### Validação Visual e Impacto no Negócio: O Resgate de Dados Históricos
+No modelo incremental anterior, o dashboard apresentava um total de apenas 156 interações. Como o script SQL filtrava estritamente a data da execução, qualquer evento que chegasse com atraso (*late-arriving data*) era ignorado. A pipeline estava a perder dados históricos.
+Com a nova arquitetura *Full Refresh* a efetuar a leitura completa, o número de interações saltou drasticamente para **1.092**. Isto não representa um erro de duplicação, mas sim o resgate da integridade total dos dados. A área de negócio tem agora a garantia de que as métricas refletem 100% da realidade.
+
+### 🟢 Atualização de Estabilidade e Manutenção CI/CD
+**O "Falso Positivo" na Pipeline:** No dia seguinte à refatoração, o *Circuit Breaker* barrou a pipeline devido a um alerta no teste de Frescor dos Dados (*Data Freshness*), registrando um atraso de 16 dias (o limite era 15).
+Como este projeto utiliza um dataset estático para fins de demonstração (cujos últimos eventos ocorreram em Setembro de 2026), ajustei a função lambda do dicionário de testes, ampliando a janela de aceitação de 15 para 365 dias, adaptando a regra de produção para o ambiente de portfólio.
+
+Além disso, a manutenção do CI/CD foi realizada: o resumo da execução apresentou anotações de depreciação do Node.js 20. Atualizei imediatamente o ficheiro `orquestracao_diaria.yml` elevando as dependências (`actions/checkout@v4` e `actions/setup-python@v5`).
+
+A pipeline encontra-se agora perfeitamente estável, passando em todos os testes e operando com os padrões mais modernos de DevOps.
+
+![Pipeline Estável no GitHub Actions](00_pipeline_estavel_github.png)
+
+---
+
+## Evolução para Big Data com Databricks e PySpark 
+ 
+
+#### Objetivo do Dia
+Sair do processamento em memória de uma única máquina (Pandas) e reproduzir a limpeza da Camada Silver em um motor distribuído. O objetivo técnico foi validar a mesma lógica de transformação — tipagem de data, tratamento de nulos e padronização de texto — rodando no Databricks Free Edition, com o dado gravado em formato Delta.
+
+#### 1. Ingestão: Upload para um Volume do Unity Catalog
+A arquitetura do Databricks evoluiu e abandonámos o antigo DBFS público. Antes de processar, o arquivo bruto precisa estar em um local que o Spark consiga ler com segurança. Criei o volume `dados_brutos` no catálogo `workspace.default` utilizando o **Unity Catalog** e fiz o upload do arquivo CSV diretamente pela interface.
+
+![Ingestão via Volume no Databricks](01_ingestao_volume.png)
+
+O caminho gerado segue o padrão seguro `/Volumes/workspace/default/dados_brutos/dia46_bronze_eventos_ga4.csv`, que é como o Spark localiza arquivos dentro do Unity Catalog — muito diferente da simples leitura local de arquivos em Pandas.
+
+#### 2. Leitura e Transformação com PySpark
+Criei o notebook `Limpeza_Silver_PySpark` e apliquei exatamente as mesmas regras de qualidade da Silver original, agora utilizando a robusta API de DataFrame do Spark:
+
+```python
+from pyspark.sql import functions as F
+
+# O caminho do ficheiro no Volume
+caminho_ficheiro = '/Volumes/workspace/default/dados_brutos/dia46_bronze_eventos_ga4.csv'
+
+# 1. Ler o CSV com PySpark
+df = spark.read.csv(caminho_ficheiro, header=True, inferSchema=True)
+
+# 2. Aplicar as transformações da camada Silver
+silver = (df
+  .withColumn('event_date', F.to_date(F.col('event_date').cast('string'), 'yyyyMMdd'))
+  .fillna({'country': 'NÃO INFORMADO'})
+  .withColumn('country', F.upper('country')))
+
+# 3. Mostrar as primeiras 5 linhas e a estrutura da tabela
+silver.show(5)
+silver.printSchema()
+```
+
+![Leitura do CSV e transformação da Silver em PySpark](02_limpeza_pyspark.png)
+
+O `printSchema()` confirmou o sucesso da transformação: `event_date` chegou perfeitamente tipado como `date` não mais como inteiro ou string, e o preenchimento de nulos e conversão de strings para maiúsculas foram executados de forma distribuída.
+
+#### 3. Gravação em Delta e Lazy Evaluation
+Gravei o resultado no formato otimizado **Delta Lake** e inspecionei o plano de execução antes de confirmar que o Spark só processa quando uma ação é chamada (*Lazy Evaluation*):
+
+```python
+# Gravar como tabela Delta
+silver.write.format('delta').mode('overwrite').saveAsTable('silver_eventos_ga4')
+
+# Observar o plano de execução (Lazy Evaluation)
+print("\n--- Plano de Execução (Lazy Evaluation) ---")
+silver.explain()
+```
+
+![Gravação em Delta e plano de execução (lazy evaluation)](03_lazy_evaluation.png)
+
+Ao analisar o `.explain()`, o *Physical Plan* foi exposto. Comprovámos a **Lazy Evaluation** na prática: o motor *Photon* planejou a leitura do CSV, o cast de data e as alterações de string, executando o trabalho pesado apenas no momento da escrita da tabela (`.saveAsTable()`). Esta é a diferença central em relação ao Pandas, que processa linha a linha de forma imediata e menos eficiente.
+
+#### 4. Validação Unificada via SQL
+A grande vantagem do ecossistema Databricks é o seu ambiente unificado. Após o processamento com Python/PySpark, utilizei o *magic command* `%sql` para consultar a tabela Delta recém-criada, confirmando que o dado está limpo e perfeitamente agrupado para consumo analítico, usando sintaxe SQL tradicional no mesmo notebook:
+
+```sql
+%sql
+SELECT country, COUNT(DISTINCT user_pseudo_id) AS usuarios
+FROM silver_eventos_ga4
+GROUP BY country;
+```
+
+![Validação da tabela Delta com consulta SQL](04_analise_sql.png)
+
+---
+
+#### ⚖️ Comparação: Pandas vs PySpark
+
+| Ponto | Pandas | PySpark |
+| :--- | :--- | :--- |
+| **Execução** | Uma máquina, em memória | Distribuída em um cluster |
+| **Avaliação** | Imediata | Preguiçosa (lazy), executa na ação |
+| **Escala** | Limitada pela memória | Cresce com o cluster |
+| **Escrita** | CSV ou to_gbq | Delta ou Parquet |
+
+#### Conclusão e Aprendizados
+A principal mudança que percebi entre Pandas e PySpark é o **paradigma de processamento**. O Pandas processa os dados de forma imediata na memória RAM do computador local, o que é excelente para ficheiros pequenos, mas falha quando a volumetria escala. Já o PySpark no ambiente de Big Data porque distribui o trabalho por várias máquinas (cluster) e usa a *lazy evaluation* — ele "anota" todas as transformações no plano físico e apenas executa o trabalho pesado quando é estritamente necessário ao chamarmos uma ação como `show` ou `write`. Isso traz um nível de performance, resiliência e escala que o Pandas simplesmente não consegue acompanhar.
