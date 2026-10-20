@@ -2,47 +2,68 @@ import pandas as pd
 import os
 from datetime import datetime
 from google.cloud import bigquery
+import uuid
+import time
+from utils_observabilidade import registrar_execucao
 
-# Credenciais
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "credenciais_gcp.json"
+# Ajuste de Autenticação Inteligente:
+if os.path.exists("credenciais_gcp.json"):
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "credenciais_gcp.json"
+
 client = bigquery.Client(project='portifolio-martech')
 
-hoje = datetime.now()
-data_alvo = hoje.date()
-particao_hoje = hoje.strftime('%Y%m%d')
+# Inicia o cronômetro e cria um ID único para esta execução
+run_id = str(uuid.uuid4())
+inicio_etapa = time.time()
+print(f"Iniciando a etapa Silver. Run ID: {run_id}")
 
-print(f"Extraindo dados da Bronze para a data alvo: {data_alvo}...")
-# Lemos apenas os dados inseridos hoje (Carga Incremental)
-query = f"""
-    SELECT *
-    FROM `portifolio-martech.bronze.eventos_ga4`
-    WHERE _ingestion_date = '{data_alvo}'
-"""
-df_silver = client.query(query).to_dataframe()
+try:
+    hoje = datetime.now()
+    data_alvo = hoje.date()
+    particao_hoje = hoje.strftime('%Y%m%d')
 
-print("Aplicando limpeza e regras de qualidade (Camada Silver)...")
-# Converte a data do evento para o formato correto datetime
-df_silver['event_date'] = pd.to_datetime(
-    df_silver['event_date'], format='%Y%m%d')
+    print(f"Extraindo dados da Bronze para a data alvo: {data_alvo}...")
+    # Lemos apenas os dados inseridos hoje (Carga Incremental)
+    query = f"""
+        SELECT *
+        FROM `portifolio-martech.bronze.eventos_ga4`
+        WHERE _ingestion_date = '{data_alvo}'
+    """
+    df_silver = client.query(query).to_dataframe()
 
-#  A linha que preenchia user_pseudo_id com 'ID_AUSENTE' foi removida!
-# Deixamos o ID como nulo para a camada Gold contar os eventos anônimos corretamente.
+    print("Aplicando limpeza e regras de qualidade (Camada Silver)...")
+    # Converte a data do evento para o formato correto datetime
+    df_silver['event_date'] = pd.to_datetime(
+        df_silver['event_date'], format='%Y%m%d')
 
-# Tratamento de nulos em outras colunas e padronização
-df_silver['country'] = df_silver['country'].fillna('NÃO INFORMADO').str.upper()
-df_silver['event_name'] = df_silver['event_name'].str.upper()
+    #  A linha que preenchia user_pseudo_id com 'ID_AUSENTE' foi removida!
+    # Deixamos o ID como nulo para a camada Gold contar os eventos anônimos corretamente.
 
-print("Carregando tabela no BigQuery (Silver - Modo Sandbox)...")
-# Usamos o decorador de partição para sobrescrever apenas a "gaveta" de hoje
-tabela_destino = f'portifolio-martech.silver.eventos_ga4${particao_hoje}'
+    # Tratamento de nulos em outras colunas e padronização
+    df_silver['country'] = df_silver['country'].fillna(
+        'NÃO INFORMADO').str.upper()
+    df_silver['event_name'] = df_silver['event_name'].str.upper()
 
-config_carga = bigquery.LoadJobConfig(
-    write_disposition='WRITE_TRUNCATE',
-    time_partitioning=bigquery.TimePartitioning(field='_ingestion_date'),
-)
+    print("Carregando tabela no BigQuery (Silver - Modo Sandbox)...")
+    # Usamos o decorador de partição para sobrescrever apenas a "gaveta" de hoje
+    tabela_destino = f'portifolio-martech.silver.eventos_ga4${particao_hoje}'
 
-client.load_table_from_dataframe(
-    df_silver, tabela_destino, job_config=config_carga
-).result()
+    config_carga = bigquery.LoadJobConfig(
+        write_disposition='WRITE_TRUNCATE',
+        time_partitioning=bigquery.TimePartitioning(field='_ingestion_date'),
+    )
 
-print("✅ Limpeza e Carga Incremental da Camada Silver concluídas com sucesso!")
+    client.load_table_from_dataframe(
+        df_silver, tabela_destino, job_config=config_carga
+    ).result()
+
+    # REGISTO DE SUCESSO
+    registrar_execucao(client, 'silver', 'sucesso',
+                       len(df_silver), inicio_etapa, run_id)
+    print("✅ Limpeza e Carga Incremental da Camada Silver concluídas com sucesso!")
+
+except Exception as erro:
+    # REGISTO DE FALHA
+    registrar_execucao(client, 'silver', 'falha', 0, inicio_etapa, run_id)
+    print(f"❌ Erro na etapa Silver: {erro}")
+    raise

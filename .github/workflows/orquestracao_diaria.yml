@@ -1,4 +1,4 @@
-name: Orquestração Diária - Pipeline de Dados (Fase 5)
+name: Orquestração Diária - Pipeline de Dados (Semana 6)
 
 on:
   schedule:
@@ -8,6 +8,11 @@ on:
 jobs:
   pipeline_completa:
     runs-on: ubuntu-latest
+    
+    # PERMISSÕES NECESSÁRIAS PARA O WORKLOAD IDENTITY
+    permissions:
+      contents: 'read'
+      id-token: 'write'
 
     steps:
       - name: Passo 1 - Checkout do Repositório
@@ -21,11 +26,12 @@ jobs:
       - name: Passo 3 - Instalar Dependências
         run: pip install google-cloud-bigquery pandas db-dtypes pandas-gbq
 
-      - name: Passo 4 - Autenticação
-        run: |
-          cat << 'EOF' > credenciais_gcp.json
-          ${{ secrets.GCP_CREDENTIALS }}
-          EOF
+      # Autenticação Segura OIDC (Sem chaves JSON)
+      - name: Passo 4 - Autenticar no Google Cloud (Workload Identity)
+        uses: 'google-github-actions/auth@v2'
+        with:
+          workload_identity_provider: 'projects/686455979320/locations/global/workloadIdentityPools/github-actions-pool/providers/meu-github-provider'
+          service_account: 'pipeline-engenharia@portifolio-martech.iam.gserviceaccount.com'
 
       - name: Passo 5 - Ingestão Bronze
         run: python Modulo_4_Engenharia_Analytics_BQ/dia46_ingestao_bronze.py
@@ -36,9 +42,12 @@ jobs:
       - name: Passo 7 - Camada Gold
         run: python Modulo_4_Engenharia_Analytics_BQ/dia50_gold.py
 
-      - name: Passo 8 - Circuit Breaker
+      - name: Passo 8 - Circuit Breaker (Validação de Schema e Qualidade)
         run: python Modulo_4_Engenharia_Analytics_BQ/dia49_validacao_gold.py
 
-      - name: Passo 9 - Limpeza de Segurança
-        if: always()
-        run: rm -f credenciais_gcp.json
+      # Alerta de falha exigido na Semana 6
+      - name: Passo 9 - Notificar falha
+        if: failure()
+        run: |
+          echo "::error title=Falha na Pipeline!::A orquestração falhou. Verifique os logs."
+          echo "Pipeline falhou em $(date). O Workload Identity e o Circuit Breaker impediram a propagação de dados corrompidos."
