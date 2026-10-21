@@ -6,13 +6,9 @@ import uuid
 import time
 from utils_observabilidade import registrar_execucao
 
-# Ajuste de Autenticação
-if os.path.exists("credenciais_gcp.json"):
-    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "credenciais_gcp.json"
-
-print("Conectando ao BigQuery...")
-# Inicializa o cliente apontando para o seu projeto
-client = bigquery.Client(project='portifolio-martech')
+print("Conectando ao BigQuery via Workload Identity...")
+# Inicializa o cliente de forma limpa, herdando automaticamente o token seguro do GitHub Actions
+client = bigquery.Client(project='portfolio-martech')
 
 # Inicia o cronômetro e cria um ID único para esta execução
 run_id = str(uuid.uuid4())
@@ -24,7 +20,7 @@ try:
     query = """
         SELECT event_date, event_timestamp, event_name,
                user_pseudo_id, geo.country AS country
-        FROM `portifolio-martech.analytics_538183128.events_*`
+        FROM `portfolio-martech.analytics_538183128.events_*`
         WHERE _TABLE_SUFFIX BETWEEN @inicio AND @fim
     """
 
@@ -46,7 +42,7 @@ try:
 
     print("Carregando tabela no BigQuery (Idempotência via Decorador de Partição)...")
     particao_hoje = hoje.strftime('%Y%m%d')
-    tabela_destino = f'portifolio-martech.bronze.eventos_ga4${particao_hoje}'
+    tabela_destino = f'portfolio-martech.bronze.eventos_ga4${particao_hoje}'
 
     config_carga = bigquery.LoadJobConfig(
         write_disposition='WRITE_TRUNCATE',
