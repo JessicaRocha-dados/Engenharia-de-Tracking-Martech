@@ -8,7 +8,7 @@ from utils_observabilidade import registrar_execucao
 
 print("Conectando ao BigQuery via Workload Identity...")
 # Inicializa o cliente de forma limpa, herdando automaticamente o token seguro do GitHub Actions
-client = bigquery.Client(project='portfolio-martech')
+client = client = bigquery.Client(project='portifolio-martech')
 
 # Inicia o cronômetro e cria um ID único para esta execução
 run_id = str(uuid.uuid4())
@@ -20,7 +20,7 @@ try:
     query = """
         SELECT event_date, event_timestamp, event_name,
                user_pseudo_id, geo.country AS country
-        FROM `portfolio-martech.analytics_538183128.events_*`
+        FROM `portifolio-martech.analytics_538183128.events_*`
         WHERE _TABLE_SUFFIX BETWEEN @inicio AND @fim
     """
 
@@ -42,7 +42,7 @@ try:
 
     print("Carregando tabela no BigQuery (Idempotência via Decorador de Partição)...")
     particao_hoje = hoje.strftime('%Y%m%d')
-    tabela_destino = f'portfolio-martech.bronze.eventos_ga4${particao_hoje}'
+    tabela_destino = f'portifolio-martech.bronze.eventos_ga4${particao_hoje}'
 
     config_carga = bigquery.LoadJobConfig(
         write_disposition='WRITE_TRUNCATE',
