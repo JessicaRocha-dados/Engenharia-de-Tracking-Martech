@@ -29,7 +29,7 @@ jobs:
         uses: 'google-github-actions/auth@v2'
         with:
           workload_identity_provider: 'projects/686455979320/locations/global/workloadIdentityPools/github-actions-pool/providers/meu-github-provider'
-          service_account: 'pipeline-engenharia@portfolio-martech.iam.gserviceaccount.com'
+          service_account: 'pipeline-engenharia@portifolio-martech.iam.gserviceaccount.com'
 
       - name: Passo 5 - Ingestão Bronze
         run: python Modulo_4_Engenharia_Analytics_BQ/dia46_ingestao_bronze.py
