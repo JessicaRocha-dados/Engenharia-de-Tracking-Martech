@@ -1228,3 +1228,51 @@ Com o pool ativo, o GitHub Actions passa a se autenticar na conta de serviço de
 ### Conclusão e Aprendizados
 
 A pipeline deixou de ser uma caixa-preta: cada execução grava seu próprio histórico, e uma falha é detectada e registrada antes de chegar ao BI. A ingestão da Bronze e da Silver deixou de depender de um arquivo local e passou a ser incremental por partição, o que torna reexecuções seguras. O circuit breaker evoluiu de um teste único para um conjunto de regras que reporta todas as falhas de uma vez, o que torna o diagnóstico mais rápido. E a autenticação deixou de depender de uma credencial de longa duração, reduzindo o risco de um vazamento dar acesso permanente ao ambiente. Próximo passo: ligar o alerta de falha a um canal real (e-mail ou Teams), para que a notificação não dependa de alguém abrir o log do GitHub Actions.
+
+---
+
+#  Log de Evolução de Hoje 
+
+Hoje, avançámos significativamente na maturidade de DataOps e engenharia de confiabilidade da nossa pipeline:
+
+1. **Ativação e Validação do Alerta de Falha (Observabilidade):**
+   * Configurámos e testámos a etapa de notificação automática de erros via **SMTP/Gmail** no GitHub Actions, garantindo que qualquer interrupção envie um alerta em tempo real para a engenharia.
+
+2. **Diagnóstico e Correção da Autenticação (Workload Identity):**
+   * Investigámos e resolvemos a falha inicial de troca de tokens federados OIDC (Passo 4), estabelecendo uma ponte de segurança robusta e sem credenciais estáticas expostas entre o repositório e o Google Cloud.
+
+3. **Resolução do Erro de Caractere e Acesso (Erro 403 no BigQuery):**
+   * Diagnosticamos que o script Python apontava para `portfolio-martech` (com **`l`**), enquanto o ambiente real no GCP chamava-se `portifolio-martech` (com **`i`**). Alinhámos todas as referências no código de ingestão Bronze e aplicamos os comandos de IAM no terminal do Cloud Shell.
+
+4. **Resultado:**
+   * Executámos a orquestração de ponta a ponta: Ingestão Bronze, Limpeza Silver, Camada Gold e Circuit Breaker rodaram em perfeita harmonia, resultando no status verde absoluto no GitHub Actions.
+
+---
+
+## Desafios Enfrentados e Soluções Aplicadas Hoje
+
+Durante o processo de hoje, deparámo-nos com dois principais obstáculos que exigiram diagnóstico detalhado:
+
+###  1. Falha de Autenticação inicial:
+Na primeira tentativa de execução de hoje, o Passo 4 falhou ao tentar gerar o token federado do Google Cloud, gerando um erro de credencial.
+Ajustámos o mapeamento do provedor e as permissões de identidade para permitir que o GitHub Actions assumisse a conta de serviço com segurança.
+> ![Erro de Autenticação](erro-autenticacao-workload-identity.png)
+
+### 2. Divergência de Caractere e Erro de Acesso no BigQuery (Erro 403)
+ Após a autenticação passar, a ingestão Bronze falhou com `403 bigquery.jobs.create`. A causa raiz foi a divergência entre a letra **`l`** e **`i`** no nome do projeto (`portfolio` vs `portifolio`).
+  1. Padronizamos todas as referências no script Python (`dia46_ingestao_bronze.py`) para `portifolio-martech`.
+  2. Executamos os comandos de política IAM no terminal do GCP para vincular as permissões corretas à conta de serviço.
+> ![Terminal GCP - Configuração IAM](configuracao-iam-gcp-terminal.png)
+
+## Comprovação Prática de Hoje
+
+### A. O Alerta Automatizado em Tempo Real
+A confirmação de que o sistema de Circuit Breaker e notificações via Gmail está a atuar ativamente para proteger a qualidade dos dados.
+> ![Alerta de Falha no Gmail](alerta-falha-email-gmail.png)
+
+### B. RESULTADO 
+A execução de hoje concluída com sucesso de ponta a ponta, validando a robustez da arquitetura implementada.
+> ![Pipeline com Sucesso - All Greens](pipeline-sucesso-all-greens.png)
+
+
+
