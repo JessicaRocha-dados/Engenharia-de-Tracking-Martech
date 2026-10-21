@@ -9,7 +9,6 @@ jobs:
   pipeline_completa:
     runs-on: ubuntu-latest
 
-    # Permissão obrigatória para a ligação segura com o GCP (Workload Identity)
     permissions:
       contents: 'read'
       id-token: 'write'
@@ -26,12 +25,11 @@ jobs:
       - name: Passo 3 - Instalar Dependências
         run: pip install google-cloud-bigquery pandas db-dtypes pandas-gbq
 
-      - name: Passo 4 - Autenticar no Google Cloud (Identidade de Carga de Trabalho)
-        uses: google-github-actions/auth@v2
+      - name: Passo 4 - Autenticar no Google Cloud (Workload Identity)
+        uses: 'google-github-actions/auth@v2'
         with:
           workload_identity_provider: 'projects/686455979320/locations/global/workloadIdentityPools/github-actions-pool/providers/meu-github-provider'
-          # Substitua abaixo pelo ID real do seu projeto GCP caso esteja diferente no seu VS Code
-          service_account: 'pipeline-engenharia@SEU_PROJETO_AQUI.iam.gserviceaccount.com'
+          service_account: 'pipeline-engenharia@portfolio-martech.iam.gserviceaccount.com'
 
       - name: Passo 5 - Ingestão Bronze
         run: python Modulo_4_Engenharia_Analytics_BQ/dia46_ingestao_bronze.py

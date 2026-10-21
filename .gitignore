@@ -1,2 +1,4 @@
 credenciais_gcp.json
 *.csv
+__pycache__/
+*.pyc

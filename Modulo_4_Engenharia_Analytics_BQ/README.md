@@ -1095,3 +1095,136 @@ GROUP BY country;
 
 #### Conclusão e Aprendizados
 A principal mudança que percebi entre Pandas e PySpark é o **paradigma de processamento**. O Pandas processa os dados de forma imediata na memória RAM do computador local, o que é excelente para ficheiros pequenos, mas falha quando a volumetria escala. Já o PySpark no ambiente de Big Data porque distribui o trabalho por várias máquinas (cluster) e usa a *lazy evaluation* — ele "anota" todas as transformações no plano físico e apenas executa o trabalho pesado quando é estritamente necessário ao chamarmos uma ação como `show` ou `write`. Isso traz um nível de performance, resiliência e escala que o Pandas simplesmente não consegue acompanhar.
+
+---
+
+## DataOps  — Observabilidade, Qualidade e Segurança sem Chaves Estáticas
+
+O objetivo do dia foi dar visibilidade a cada execução da pipeline e eliminar o uso de uma chave JSON estática na autenticação com o GCP. O foco foi responder a duas perguntas que um pipeline em produção precisa resolver: *"o que aconteceu em cada execução?"* e *"como autenticar sem expor uma credencial de longa duração?"*
+
+Essa etapa também consolidou duas evoluções da camada Bronze e Silver: a leitura passou a ser feita direto do BigQuery (em vez do CSV local) e a carga passou a ser incremental, por partição.
+
+### 1. Rastreabilidade: Tabela de Auditoria `pipeline_execucoes`
+
+Criei a tabela centralizada `pipeline_execucoes` no dataset `gold` do BigQuery, com `CREATE TABLE IF NOT EXISTS` para garantir que o script possa rodar mais de uma vez sem erro. A estrutura guarda o `run_id` (identificador único da execução), a `etapa` (bronze, silver, gold ou validação), o `status` (sucesso ou falha), o total de `linhas` processadas, a `duracao_segundos` e o `executado_em`.
+
+![Criação da tabela de auditoria e logs no BigQuery](01-bigquery-criacao-tabela-pipeline-execucoes.png)
+
+Na aba de esquema, confirmei a tipagem de cada campo: `STRING` para identificadores e status, `INTEGER` para a contagem de linhas, `FLOAT` para a duração e `TIMESTAMP` para a data e hora da execução.
+
+![Esquema da tabela pipeline_execucoes no BigQuery](02-bigquery-schema-pipeline-execucoes.png)
+
+O primeiro teste gravou o registro de uma execução bem-sucedida da camada Bronze, com `run_id`, etapa, status, volumetria e timestamp em UTC.
+
+![Visualização dos registos de sucesso na tabela de auditoria](03-bigquery-dados-pipeline-execucoes-sucesso.png)
+
+### 2. Ingestão Incremental: Bronze e Silver Lendo Direto do BigQuery
+
+Antes desta etapa, a Bronze e a Silver liam um CSV local. Agora, a Bronze extrai os dados brutos direto da fonte, com filtro de período:
+
+```python
+run_id = str(uuid.uuid4())
+inicio_etapa = time.time()
+print(f"Iniciando a etapa Bronze. Run ID: {run_id}")
+
+try:
+    query = """
+        SELECT event_date, event_timestamp, event_name,
+               user_pseudo_id, geo.country AS country
+        FROM `portifolio-martech.analytics_538183128.events_*`
+        WHERE _TABLE_SUFFIX BETWEEN @inicio AND @fim
+    """
+    config_extracao = bigquery.QueryJobConfig(query_parameters=[
+        bigquery.ScalarQueryParameter('inicio', 'STRING', '20260901'),
+        bigquery.ScalarQueryParameter('fim', 'STRING', '20260930'),
+    ])
+    bq_df = client.query(query, job_config=config_extracao).to_dataframe()
+```
+
+E a carga passou a ser por **decorador de partição**: em vez de recriar a tabela inteira, cada execução sobrescreve só a "gaveta" do dia, usando `WRITE_TRUNCATE` sobre a partição `_ingestion_date`:
+
+```python
+particao_hoje = hoje.strftime('%Y%m%d')
+tabela_destino = f'portifolio-martech.bronze.eventos_ga4${particao_hoje}'
+
+config_carga = bigquery.LoadJobConfig(
+    write_disposition='WRITE_TRUNCATE',
+    time_partitioning=bigquery.TimePartitioning(field='_ingestion_date'),
+)
+client.load_table_from_dataframe(bq_df, tabela_destino, job_config=config_carga).result()
+
+registrar_execucao(client, 'bronze', 'sucesso', len(bq_df), inicio_etapa, run_id)
+print("✅ Ingestão Incremental da Camada Bronze concluída com sucesso!")
+except Exception as erro:
+    registrar_execucao(client, 'bronze', 'falha', 0, inicio_etapa, run_id)
+    print(f"❌ Erro catastrófico na etapa Bronze: {erro}")
+    raise
+```
+
+![Código Python com a inicialização do run_id na Bronze](04-codigo-python-inicializacao-run-id-bronze.png)
+![Código Python do registo de sucesso na ingestão Bronze](05-codigo-python-registro-sucesso-bronze.png)
+
+Rodar essa etapa duas vezes no mesmo dia não duplica dado: a segunda execução apenas sobrescreve a mesma partição.
+
+### 3. Observabilidade
+
+A lógica de gravação vive em `utils_observabilidade.py`. A função `registrar_execucao` calcula a duração, monta um DataFrame com os dados de log e grava na tabela de auditoria com `load_table_from_dataframe`. Um detalhe de design importante: ela tem seu próprio `try/except` interno — se o log falhar por qualquer motivo, isso é apenas reportado no console e **não derruba a pipeline principal**, porque uma falha ao registrar observabilidade não pode virar uma falha de negócio.
+
+![Definição central da função registrar_execucao em Python](06-codigo-python-funcao-utils-observabilidade.png)
+
+Na Silver, importei o mesmo módulo, para que todas as camadas usem o mesmo padrão de auditoria.
+
+![Importação dos utilitários de observabilidade na camada Silver](07-codigo-python-importacao-observabilidade-silver.png)
+
+### 4. Silver: Leitura Incremental da Bronze e Correção do Tratamento de Nulos
+
+A Silver também passou a ler direto da tabela Bronze no BigQuery, filtrando apenas a partição do dia alvo:
+
+```python
+query = f"""
+    SELECT *
+    FROM `portifolio-martech.bronze.eventos_ga4`
+    WHERE _ingestion_date = '{data_alvo}'
+"""
+df_silver = client.query(query).to_dataframe()
+```
+
+Também corrigi um ponto que eu tinha identificado como frágil: a linha que preenchia `user_pseudo_id` ausente com o texto `'ID_AUSENTE'` foi removida. Agora o ID fica nulo, e a camada Gold conta os eventos anônimos corretamente com `COUNT(DISTINCT user_pseudo_id)`, sem inflar a métrica de usuários únicos com um valor que não representa uma pessoa real.
+
+![Registo de conclusão bem-sucedida da camada Silver](08-codigo-python-registro-sucesso-silver.png)
+
+### 5. Auditoria Consolidada
+
+Com `SELECT * FROM pipeline_execucoes ORDER BY executado_em DESC`, consultei o histórico completo de execuções direto no BigQuery. A tabela mostra a sequência cronológica das etapas Bronze, Silver e Gold, cada uma com seu próprio registro de sucesso.
+
+![Consulta SQL consolidada com as etapas Bronze, Silver e Gold executadas com sucesso](09-bigquery-query-resultados-pipeline-execucoes.png)
+
+A camada Gold permanece em *full refresh* (`CREATE OR REPLACE TABLE`) por decisão deliberada: é uma agregação relativamente barata sobre a Silver, então recriá-la inteira a cada execução é mais simples do que manter lógica incremental nela — a incrementalidade importa mais nas camadas de maior volume (Bronze e Silver).
+
+### 6. Circuit Breaker: Schema, Regras de Negócio e Interrupção Segura
+
+Evoluí o script de validação (`dia49_validacao_gold.py`) com uma primeira barreira estrutural: o código extrai as colunas ativas da tabela Gold e usa `assert esperadas.issubset(colunas)` para garantir que `data_evento`, `pais`, `total_usuarios_unicos` e `total_interacoes` estão presentes antes de liberar o dado.
+
+![Validação de schema e colunas essenciais no script de Circuit Breaker](10-codigo-python-circuit-breaker-validacao-schema.png)
+
+Depois do schema, um dicionário de regras (`checks`) roda consultas SQL validadas por funções lambda, testando se a tabela não está vazia, se não há chaves nulas em campos críticos, se o dado está dentro do limite de frescor definido (365 dias) e se não há registros duplicados por data e país. O resultado do teste "tabela vazia" também é aproveitado para alimentar o `total_linhas_validadas` que vai para o log de observabilidade.
+
+![Dicionário de testes de dados e regras de validação no script do Circuit Breaker](11-codigo-python-circuit-breaker-dicionario-checks.png)
+
+Se qualquer regra falha, o script acumula o nome da regra na lista `falhas` e, ao final, dispara um único `raise RuntimeError` com todas as falhas encontradas de uma vez — não para na primeira. Isso interrompe a pipeline de forma controlada, impede que dado inconsistente siga para o BI e grava o evento de falha na tabela de auditoria.
+
+![Verificação de falhas, raise RuntimeError e o log de sucesso da validação](12-codigo-python-circuit-breaker-execucao-e-logs.png)
+
+### 7. Segurança sem Chaves: Workload Identity Federation
+
+Para eliminar a chave JSON estática usada até aqui, configurei a Workload Identity Federation no Google Cloud (IAM & Admin). Criei o pool de identidades `github-actions-pool` e o provedor OIDC `meu-github-provider`, estabelecendo uma ponte federada entre o GCP e o repositório no GitHub.
+
+![Conclusão das etapas de criação do pool e provedor no Google Cloud](13-gcp-workload-identity-criacao-concluida.png)
+
+Com o pool ativo, o GitHub Actions passa a se autenticar na conta de serviço de forma temporária, via OIDC, sem precisar manter uma chave JSON nos segredos do repositório.
+
+![Detalhes do pool github-actions-pool ativo e configurado com o provedor OIDC](14-gcp-workload-identity-detalhes-pool-ativo.png)
+
+### Conclusão e Aprendizados
+
+A pipeline deixou de ser uma caixa-preta: cada execução grava seu próprio histórico, e uma falha é detectada e registrada antes de chegar ao BI. A ingestão da Bronze e da Silver deixou de depender de um arquivo local e passou a ser incremental por partição, o que torna reexecuções seguras. O circuit breaker evoluiu de um teste único para um conjunto de regras que reporta todas as falhas de uma vez, o que torna o diagnóstico mais rápido. E a autenticação deixou de depender de uma credencial de longa duração, reduzindo o risco de um vazamento dar acesso permanente ao ambiente. Próximo passo: ligar o alerta de falha a um canal real (e-mail ou Teams), para que a notificação não dependa de alguém abrir o log do GitHub Actions.
