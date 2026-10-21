@@ -1,4 +1,4 @@
-name: Orquestração Diária - Pipeline de Dados (Fase 5)
+name: Orquestração Diária - Pipeline de Dados (Semana 6)
 
 on:
   schedule:
@@ -8,6 +8,11 @@ on:
 jobs:
   pipeline_completa:
     runs-on: ubuntu-latest
+
+    # Permissão obrigatória para a ligação segura com o GCP (Workload Identity)
+    permissions:
+      contents: 'read'
+      id-token: 'write'
 
     steps:
       - name: Passo 1 - Checkout do Repositório
@@ -21,11 +26,12 @@ jobs:
       - name: Passo 3 - Instalar Dependências
         run: pip install google-cloud-bigquery pandas db-dtypes pandas-gbq
 
-      - name: Passo 4 - Autenticação
-        run: |
-          cat << 'EOF' > credenciais_gcp.json
-          ${{ secrets.GCP_CREDENTIALS }}
-          EOF
+      - name: Passo 4 - Autenticar no Google Cloud (Identidade de Carga de Trabalho)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: 'projects/686455979320/locations/global/workloadIdentityPools/github-actions-pool/providers/meu-github-provider'
+          # Substitua abaixo pelo ID real do seu projeto GCP caso esteja diferente no seu VS Code
+          service_account: 'pipeline-engenharia@SEU_PROJETO_AQUI.iam.gserviceaccount.com'
 
       - name: Passo 5 - Ingestão Bronze
         run: python Modulo_4_Engenharia_Analytics_BQ/dia46_ingestao_bronze.py
@@ -36,9 +42,23 @@ jobs:
       - name: Passo 7 - Camada Gold
         run: python Modulo_4_Engenharia_Analytics_BQ/dia50_gold.py
 
-      - name: Passo 8 - Circuit Breaker
+      - name: Passo 8 - Circuit Breaker (Validação de Schema e Qualidade)
         run: python Modulo_4_Engenharia_Analytics_BQ/dia49_validacao_gold.py
 
-      - name: Passo 9 - Limpeza de Segurança
-        if: always()
-        run: rm -f credenciais_gcp.json
+      # Alerta de falha exigido na Semana 6 (Via Gmail)
+      - name: Passo 9 - Notificar falha por E-mail 🚨
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: "❌ Falha na Pipeline: Engenharia de Tracking Martech"
+          to: ${{ secrets.EMAIL_USERNAME }}
+          from: "GitHub Actions DataOps"
+          body: |
+            A execução diária da pipeline de dados falhou em ${{ github.repository }}.
+            O Workload Identity e o Circuit Breaker interromperam o fluxo para impedir a propagação de dados corrompidos no BigQuery.
+            Verifique os logs completos na aba Actions do GitHub.
