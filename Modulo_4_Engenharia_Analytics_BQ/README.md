@@ -1274,5 +1274,39 @@ A confirmação de que o sistema de Circuit Breaker e notificações via Gmail e
 A execução de hoje concluída com sucesso de ponta a ponta, validando a robustez da arquitetura implementada.
 > ![Pipeline com Sucesso - All Greens](pipeline-sucesso-all-greens.png)
 
+----
+## Nota: Após a estabilização completa da nossa infraestrutura através de Melhorias, CI/CD e DataOps (onde garantimos a idempotência e qualidade da Camada Gold), retomamos agora o fluxo sequencial do projeto. Nos Dias 51 a 61, o foco será a Engenharia de Analytics Avançada, desaninhando os dados reais gerados nos primeiros módulos. Daqui até o final, a missão será dissecar os dados usando SQL Avançado e cruzar as informações capturadas nos Módulos 1 e 2 para modelar o comportamento dos nossos usuários.
+----
 
+## Dia 51: O Schema do GA4 e a Linhagem de Dados (SQL Base)
+
+**Objetivo do Dia:**
+Compreender a arquitetura de armazenamento físico do GA4 no BigQuery (modelo colunar e aninhado) e estabelecer a Linhagem de Dados (Data Lineage) mapeando onde as variáveis configuradas nos Módulos de GTM Web e Server-Side desembarcaram no Data Warehouse.
+
+### 1. A Estrutura do Dado (OLAP Desnormalizado)
+Diferente de bancos relacionais tradicionais (onde dados são separados em múltiplas tabelas e unidos por JOIN), o BigQuery armazena os dados do GA4 de forma desnormalizada para otimizar o processamento em larga escala. Cada linha da tabela representa um evento completo, contendo 3 tipos estruturais de dados:
+* **Escalares:** Dados simples de relação 1:1, acessados diretamente pelo nome (ex: event_name, user_pseudo_id).
+* **STRUCT / RECORD:** "Pastas" que agrupam variáveis fixas. O acesso é feito via Notação de Ponto, sem necessidade de desaninhar (ex: geo.country).
+* **ARRAY / REPEATED:** Listas dinâmicas que permitem armazenar múltiplos parâmetros dentro de uma única linha. Exigem o uso da função UNNEST para serem lidas (ex: event_params e items).
+
+### 2. Matriz de Linhagem de Dados (Data Lineage)
+Para rastrear o ciclo de vida da nossa engenharia (dos Módulos 1 a 4), mapeámos o destino exato de cada variável de negócio que injetámos via Front-end e GTM:
+
+| Dado Injetado no Site/GTM | Onde foi criado | Localização Física no BigQuery |
+| :--- | :--- | :--- |
+| **Correção de IP (ip_override)** | Dia 45 (sGTM) | geo.country / geo.city (STRUCT) |
+| **Dimensão plano_cliente** | Dia 31 (GTM) | event_params (ARRAY) |
+| **Variáveis form_name e lead_status** | Dia 28 (GTM) | event_params (ARRAY) |
+| **Catálogo de Produtos (price, item_id)** | Dia 30 (GTM) | items (ARRAY) |
+
+### 3. Execução Prática e Governança de Custos (FinOps)
+Para inspecionar a árvore estrutural do banco de dados sem gerar custos de processamento de leitura (FinOps), utilizamos a tabela de metadados nativa do BigQuery (INFORMATION_SCHEMA).
+
+> ![Auditoria de Metadados](dia51_information_schema_0bytes.png)
+*(A imagem atesta a visão hierárquica da tabela executada a 0 Bytes, evidenciando o tipo ARRAY da coluna event_params, que armazena as chaves dinâmicas do projeto).*
+
+Em seguida, realizámos a extração dos dados estruturados (STRUCT) aplicando a trava de custos por particionamento (_TABLE_SUFFIX). O objetivo foi confirmar a eficácia do nosso roteamento Server-Side (Dia 45) na correção da geolocalização.
+
+> ![Consulta de STRUCTs com Notação de Ponto](dia51_consulta_structs.png)
+*(A execução atesta o sucesso da camada de dados: a notação de ponto extraiu perfeitamente o país e o dispositivo, confirmando a presença da geolocalização processada no servidor).*
 
