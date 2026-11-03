@@ -37,12 +37,49 @@ try:
     logging.info('OK: schema validado (Todas as colunas presentes)')
     # -----------------------------
 
-    # Dicionário de testes de dados
+    # Dicionário de testes de dados (Data Quality & QA de Eventos)
     checks = {
         'tabela vazia': (f'SELECT COUNT(*) AS n FROM `{T}`', lambda n: n > 0),
         'chaves nulas': (f'SELECT COUNT(*) AS n FROM `{T}` WHERE data_evento IS NULL OR pais IS NULL', lambda n: n == 0),
         'frescor (dias)': (f'SELECT DATE_DIFF(CURRENT_DATE(), MAX(data_evento), DAY) AS n FROM `{T}`', lambda n: n <= 365),
         'duplicidade': (f'SELECT COUNT(*) AS n FROM (SELECT 1 FROM `{T}` GROUP BY data_evento, pais HAVING COUNT(*) > 1)', lambda n: n == 0),
+
+        # --- NOVAS REGRAS DO DIA 53 (QA DE EVENTOS BRUTOS) ---
+        'qa_duplicidade_disparo': (
+            """
+            SELECT COUNT(*) AS n FROM (
+                SELECT 1 
+                FROM `portifolio-martech.analytics_538183128.events_*`
+                WHERE _TABLE_SUFFIX BETWEEN '20260901' AND FORMAT_DATE('%Y%m%d', CURRENT_DATE())
+                QUALIFY ROW_NUMBER() OVER (
+                    PARTITION BY FARM_FINGERPRINT(CONCAT(IFNULL(user_pseudo_id, 'ANONIMO'), '_', CAST(DIV(event_timestamp, 1000000) AS STRING), '_', event_name))
+                    ORDER BY event_timestamp ASC
+                ) > 1
+            )
+            """,
+            lambda n: n <= 10  # Tolerância para o histórico (10 falhas de GTM/Rede)
+        ),
+
+        'qa_orfaos_sessao': (
+            """
+            SELECT COUNT(*) AS n
+            FROM `portifolio-martech.analytics_538183128.events_*`
+            WHERE _TABLE_SUFFIX BETWEEN '20260901' AND FORMAT_DATE('%Y%m%d', CURRENT_DATE())
+              AND (SELECT value.int_value FROM UNNEST(event_params) WHERE key = 'ga_session_id') IS NULL
+            """,
+            lambda n: n <= 100  # Tolerância para o histórico (73 bloqueadores de cookies)
+        ),
+
+        'qa_integridade_lead': (
+            """
+            SELECT COUNT(*) AS n
+            FROM `portifolio-martech.analytics_538183128.events_*`
+            WHERE _TABLE_SUFFIX BETWEEN '20260901' AND FORMAT_DATE('%Y%m%d', CURRENT_DATE())
+              AND event_name = 'generate_lead'
+              AND (SELECT value.string_value FROM UNNEST(event_params) WHERE key = 'lead_status') IS NULL
+            """,
+            lambda n: n <= 15  # Tolerância ajustada para o histórico (15 leads sem status por GTM/Rede)
+        )
     }
 
     falhas = []
