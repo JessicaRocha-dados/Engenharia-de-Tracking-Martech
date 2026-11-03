@@ -59,6 +59,7 @@ try:
             """,
             lambda n: n <= 10  # Tolerância para o histórico (10 falhas de GTM/Rede)
         ),
+        
 
         'qa_orfaos_sessao': (
             """
