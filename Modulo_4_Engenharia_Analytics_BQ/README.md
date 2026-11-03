@@ -1310,3 +1310,64 @@ Em seguida, realizámos a extração dos dados estruturados (STRUCT) aplicando a
 > ![Consulta de STRUCTs com Notação de Ponto](dia51_consulta_structs.png)
 *(A execução atesta o sucesso da camada de dados: a notação de ponto extraiu perfeitamente o país e o dispositivo, confirmando a presença da geolocalização processada no servidor).*
 
+---
+
+## Dia 52: Desaninhando Dados (UNNEST & Scalar Subqueries)
+
+**Objetivo:** Dominar a extração de arrays (`event_params`) do GA4 para colunas próprias sem multiplicar linhas acidentalmente, trazendo à tona os parâmetros de negócio criados na camada de coleta (GTM).
+
+### A Teoria e a Lógica de Desaninhamento
+O uso de `CROSS JOIN UNNEST(event_params)` na cláusula `FROM` é perigoso, pois achata a tabela inteira e multiplica as linhas pelo número de parâmetros do evento. Isso destrói a granularidade de "1 linha = 1 evento", inflando contagens de usuários e custos de processamento no BigQuery. 
+
+Engenharia de Analytics aplicado neste projeto utiliza **Scalar Subqueries** dentro da instrução `SELECT`. Esse método atua como uma extração: entra no array da linha específica, busca a chave correspondente, extrai o valor e fecha a operação, garantindo a integridade e a granularidade dos dados.
+
+## Por que é importante pegar o primeiro valor não-nulo entre as opções numéricas ao tratar dados financeiros?
+
+A arquitetura do GA4 no BigQuery é polimórfica. Ele não sabe antecipadamente se o valor enviado é texto ou número. Para dados financeiros, uma compra de valor quebrado (ex: R$ 99,50) é salva em `value.double_value` ou `value.float_value`. Porém, uma compra de valor exato (ex: R$ 100,00) pode ser interpretada como número inteiro e salva em `value.int_value`, deixando as outras colunas da mesma linha nulas. Se a query extrair apenas o `double_value`, as vendas de valores redondos retornarão em branco, causando perda real no cálculo de faturamento e LTV. A função `COALESCE` resolve isso capturando o primeiro valor numérico não-nulo encontrado e padronizando a saída via `CAST`, garantindo que 100% da receita seja contabilizada corretamente.
+
+### Evidências e Validação dos Resultados
+
+O evento `generate_lead` desaninhou corretamente o array, trazendo `newsletter_home` para a coluna `form_name` e `qualificado` para `lead_status`. 
+A dimensão personalizada `plano_cliente` capturou com sucesso o valor `Premium`. 
+As colunas `valor_monetario` e `currency` retornaram nulas, o que é o comportamento matemático e lógico correto, uma vez que o evento capturado foi uma geração de lead, e dados financeiros pertencem exclusivamente ao evento `purchase`.
+
+*(Evidências da execução no BigQuery)*
+
+![Print 1 - Extração de form_name e lead_status](dia52_unnest_parametros_1.png)
+![Print 2 - Extração de plano_cliente e validação financeira](dia52_unnest_parametros_2.png)
+
+### Trava FinOps e Eficiência
+A consulta utiliza a trava FinOps `_TABLE_SUFFIX` aliada à leitura estritamente colunar do BigQuery, processando volume inferior a 1 MB e anulando custos excedentes.
+
+### Query Executada:
+```sql
+SELECT 
+    event_date,
+    event_name,
+    user_pseudo_id,
+    
+    -- 1. Parâmetros Nativos do GA4
+    (SELECT value.int_value FROM UNNEST(event_params) WHERE key = 'ga_session_id') AS ga_session_id,
+    (SELECT value.string_value FROM UNNEST(event_params) WHERE key = 'page_location') AS page_location,
+    
+    -- 2. Parâmetros de Negócio (Criados no Módulo 2 / GTM)
+    (SELECT value.string_value FROM UNNEST(event_params) WHERE key = 'form_name') AS form_name,
+    (SELECT value.string_value FROM UNNEST(event_params) WHERE key = 'lead_status') AS lead_status,
+    (SELECT value.string_value FROM UNNEST(event_params) WHERE key = 'plano_cliente') AS plano_cliente,
+    
+    -- 3. Parâmetros de E-commerce (Tratamento Polimórfico)
+    (SELECT COALESCE(value.double_value, value.float_value, CAST(value.int_value AS FLOAT64)) FROM UNNEST(event_params) WHERE key = 'value') AS valor_monetario,
+    (SELECT value.string_value FROM UNNEST(event_params) WHERE key = 'currency') AS currency
+
+FROM 
+    `portifolio-martech.analytics_538183128.events_*`
+WHERE 
+    _TABLE_SUFFIX BETWEEN '20260901' AND FORMAT_DATE('%Y%m%d', CURRENT_DATE())
+    AND event_name IN ('generate_lead', 'purchase')
+ORDER BY 
+    event_date DESC
+LIMIT 5;
+```
+
+A execução deste dia marca a transição bem-sucedida dos dados brutos e aninhados do GA4 para uma estrutura tabular analítica pronta para consumo. A aplicação de **Scalar Subqueries** garantiu a extração limpa dos parâmetros de negócio (como formulários, status de lead e planos) sem comprometer a granularidade essencial de "1 linha = 1 evento", evitando a duplicação de dados e os altos custos de processamento associados ao `CROSS JOIN UNNEST`. 
+Simultaneamente, o tratamento das colunas polimórficas com `COALESCE` assegurou a integridade da modelagem financeira, garantindo que 100% da receita seja capturada independentemente do formato do dado ingerido. Com a infraestrutura validada e as evidências versionadas, a base de dados está agora limpa e otimizada sob as práticas de FinOps e preparada para as futuras etapas de modelagem dimensional e análise de negócios.
