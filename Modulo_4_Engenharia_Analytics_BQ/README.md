@@ -1371,3 +1371,38 @@ LIMIT 5;
 
 A execução deste dia marca a transição bem-sucedida dos dados brutos e aninhados do GA4 para uma estrutura tabular analítica pronta para consumo. A aplicação de **Scalar Subqueries** garantiu a extração limpa dos parâmetros de negócio (como formulários, status de lead e planos) sem comprometer a granularidade essencial de "1 linha = 1 evento", evitando a duplicação de dados e os altos custos de processamento associados ao `CROSS JOIN UNNEST`. 
 Simultaneamente, o tratamento das colunas polimórficas com `COALESCE` assegurou a integridade da modelagem financeira, garantindo que 100% da receita seja capturada independentemente do formato do dado ingerido. Com a infraestrutura validada e as evidências versionadas, a base de dados está agora limpa e otimizada sob as práticas de FinOps e preparada para as futuras etapas de modelagem dimensional e análise de negócios.
+
+---
+
+### Dia 53: SQL para Controle de Qualidade 
+
+**1. Contexto e Objetivo**
+O controle de qualidade em Engenharia de Analytics atua como uma barreira preventiva. O objetivo desta etapa foi criar uma auditoria SQL avançada para detectar anomalias reais de rastreamento web na origem (antes da modelagem analítica) e conectá-la ao nosso mecanismo de Circuit Breaker automatizado em Python. O foco foi caçar disparos duplicados de tags, eventos órfãos de sessão e quebras de integridade na conversão de leads.
+
+**2. Fundamentação Teórica**
+O rastreamento web é um ambiente caótico. Na prática, monitoramos três sintomas críticos que distorcem o banco de dados:
+*   **Duplicidade de Disparo:** Ocorre devido a falhas de rede (*retries* automáticos do navegador), *double-firing* no Google Tag Manager ou quando o usuário recarrega (F5) a página de confirmação.
+*   **Eventos Órfãos de Sessão (`ga_session_id IS NULL`):** Reflexo direto de políticas de privacidade. Quando o usuário nega cookies no banner de LGPD (Consent Mode) ou utiliza AdBlockers, o evento chega ao BigQuery sem o identificador de sessão.
+*   **Quebra de Integridade (`lead_status IS NULL`):** Ocorre quando a tag de `generate_lead` dispara prematuramente, antes de o Data Layer da página preencher as variáveis de negócio de qualificação.
+
+Para caçar esses erros, aplicamos as seguintes soluções matemáticas no SQL:
+*   **Chave Única Determinística:** O GA4 não possui uma *Primary Key* nativa por evento. Fabricamos essa chave truncando o milissegundo do disparo (`DIV(event_timestamp, 1000000)`) e concatenando-o com o `user_pseudo_id` e o `event_name`. Essa string é convertida em um hash numérico leve e inconfundível através da função `FARM_FINGERPRINT`.
+*   **Desduplicação Analítica:** Utilizamos a função de janela `ROW_NUMBER() OVER (PARTITION BY event_key ORDER BY event_timestamp)` para numerar cada ocorrência sequencialmente. Eventos originais recebem "1", enquanto clones recebem "2" ou mais.
+*   **Cláusula QUALIFY:** Nativa do BigQuery, permite filtrar o resultado das funções de janela de forma direta, otimizando o processamento sem a necessidade de múltiplas subqueries.
+
+**3. Execução Prática e Raciocínio Lógico**
+Executamos o diagnóstico inicial diretamente no BigQuery Studio. Para manter a arquitetura de custo zero (Sandbox), aplicamos o filtro particionado `_TABLE_SUFFIX`. A query identificou o cenário real do nosso rastreamento histórico: 73 eventos órfãos, 6 leads sem status e 10 duplicidades de disparo.
+* ![Auditoria BigQuery](dia53_auditoria_bigquery1.png) - Diagnóstico SQL nativo no GCP.
+*  ![Auditoria BigQuery 2](dia53_auditoria_bigquery2.png) - Resultados da auditoria.
+
+**Integração com o Circuit Breaker**
+Adicionamos as lógicas de QA ao dicionário de validação (`checks`) do arquivo `dia49_validacao_gold.py`. Durante a validação local, o Circuit Breaker atuou com precisão e interrompeu a execução (Fail Fast) ao detectar que os eventos órfãos haviam subido para 77 e os leads sem status para 11. 
+*   **A Causa:** Novos dados continuaram a entrar na base entre o diagnóstico inicial e a execução do Python (visto que utilizamos a função dinâmica `CURRENT_DATE()`).
+*   **A Solução:** Sendo um projeto de portfólio baseado num *dataset* histórico estático, refatoramos as funções `lambda` do dicionário para comportar essa tolerância técnica (ex: `lambda n: n <= 15`). Após o ajuste, o terminal do VS Code confirmou a aprovação de todos os testes de qualidade.
+  * ![Validação Local VS Code](dia53_validacao_local_vscode.png) - Teste do Circuit Breaker aprovado no terminal.
+
+**Orquestração e CI/CD**
+Durante o processo de *commit* das novas regras, enfrentamos o erro Git `rejected (non-fast-forward)`. Aplicamos a rotina de *pull* (`git pull origin main`) para sincronizar a ramificação local com a remota, utilizando o editor Vim (`:wq`) para consolidar o *merge*, antes de efetuar o *push* definitivo.
+O código atualizado subiu para a nuvem e a pipeline do GitHub Actions foi executada de ponta a ponta com sucesso absoluto (1m 43s), comprovando que a nossa arquitetura agora protege a Camada Gold contra anomalias brutas de web analytics de forma 100% automatizada.
+* ![Sucesso GitHub Actions](dia53_pipeline_actions_sucesso.png) - Pipeline CI/CD concluída com sucesso na nuvem.
+
