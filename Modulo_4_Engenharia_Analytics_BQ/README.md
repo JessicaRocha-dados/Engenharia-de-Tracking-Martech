@@ -1406,3 +1406,100 @@ Durante o processo de *commit* das novas regras, enfrentamos o erro Git `rejecte
 O código atualizado subiu para a nuvem e a pipeline do GitHub Actions foi executada de ponta a ponta com sucesso absoluto (1m 43s), comprovando que a nossa arquitetura agora protege a Camada Gold contra anomalias brutas de web analytics de forma 100% automatizada.
 * ![Sucesso GitHub Actions](dia53_pipeline_actions_sucesso.png) - Pipeline CI/CD concluída com sucesso na nuvem.
 
+----
+
+### Dia 54: Consultas Avançadas — Window Functions e Jornada do Funil
+
+**Objetivo:**
+Mapear a jornada cronológica e a atribuição de origem de cada um dos 10 utilizadores únicos do projeto, utilizando funções de janela (*Window Functions*) no BigQuery para reconstruir o funil de conversão sem perder a linha do tempo.
+
+**Contexto e Raciocínio Lógico:**
+No ecossistema de Web Analytics, utilizar um simples `GROUP BY` para agregar dados destrói a análise de jornada, pois colapsa as linhas e elimina a ordem cronológica dos eventos. A solução técnica aplica a cláusula `OVER(PARTITION BY user_pseudo_id ORDER BY event_timestamp)` para criar uma "gaveta" isolada e cronológica por utilizador.
+
+**Desenvolvimento:**
+Para manter o código legível e organizado, dividimos a nossa *query* em três etapas principais (CTEs):
+
+------------------------------------------------------------------------------------------------------
+**Passo A: Preparação da Base:**
+Nesta primeira CTE (`jornada_base`), estruturamos os dados brutos para a análise de jornada, aplicando três técnicas fundamentais:
+*   **Scalar Subqueries com UNNEST:** Em vez de utilizar um `CROSS JOIN` (que multiplicaria as linhas e prejudicaria a cronologia), utilizamos uma subconsulta escalar para extrair diretamente a URL da página (`page_location`) de dentro do *array* aninhado `event_params` do GA4.
+*   **Aproveitamento de Campos Nativos:** Puxamos a localização do utilizador (`geo.country`) diretamente da estrutura padrão da tabela (dado validado após o nosso ajuste de *ip_override* no Dia 45).
+*   **Binarização do Funil (Pivotagem):** Através de instruções `CASE WHEN`, transformamos a coluna genérica `event_name` em colunas específicas de *flags* binárias (`1` ou `0`). Isso converte os eventos de comportamento soltos (Scroll, Rodapé, Lead, Premium) em marcadores claros de avanço, preparando o para as funções de janela.
+
+```sql
+WITH jornada_base AS (
+    SELECT
+        user_pseudo_id,
+        event_timestamp,
+        event_name,
+        -- Extração da URL da página (Scalar Subquery)
+        (SELECT value.string_value FROM UNNEST(event_params) WHERE key = 'page_location') AS pagina_atual,
+        -- País validado nativamente após o ip_override do Dia 45
+        geo.country AS pais,
+        
+        -- Criação de flags binárias (1 ou 0) para cada etapa do funil
+        CASE WHEN event_name = 'scroll' THEN 1 ELSE 0 END AS flag_scroll,
+        CASE WHEN event_name = 'view_footer' THEN 1 ELSE 0 END AS flag_rodape,
+        CASE WHEN event_name = 'generate_lead' THEN 1 ELSE 0 END AS flag_lead,
+        CASE WHEN event_name = 'purchase' THEN 1 ELSE 0 END AS flag_premium
+    FROM
+        `portifolio-martech.analytics_538183128.events_*`
+    WHERE
+        -- Trava FinOps para limitar processamento histórico
+        _TABLE_SUFFIX BETWEEN '20260901' AND FORMAT_DATE('%Y%m%d', CURRENT_DATE())
+),
+```
+
+------------------------------------------------------------------------------------------------------
+
+**Passo B: Atribuição First-Touch e Acúmulo de Funil:**
+Usamos FIRST_VALUE para olhar para a "gaveta" cronológica de cada utilizador e resgatar a sua exata porta de entrada. Em paralelo, usamos o MAX para registar se ele atingiu os objetivos em qualquer ponto da jornada.
+
+```sql
+atribuicao_usuario AS (
+    SELECT
+        user_pseudo_id,
+        
+        -- Modelagem First-Touch: Capturando a origem da jornada ordenando pelo timestamp
+        FIRST_VALUE(event_timestamp) OVER(PARTITION BY user_pseudo_id ORDER BY event_timestamp ASC) AS primeiro_acesso_micros,
+        FIRST_VALUE(pagina_atual) OVER(PARTITION BY user_pseudo_id ORDER BY event_timestamp ASC) AS primeira_pagina,
+        FIRST_VALUE(pais) OVER(PARTITION BY user_pseudo_id ORDER BY event_timestamp ASC) AS pais_origem,
+        
+        -- Consolidando o Funil: Se tem '1' em qualquer ponto, o MAX assume como verdadeiro
+        MAX(flag_scroll) OVER(PARTITION BY user_pseudo_id) AS fez_scroll,
+        MAX(flag_rodape) OVER(PARTITION BY user_pseudo_id) AS viu_rodape_50pct,
+        MAX(flag_lead) OVER(PARTITION BY user_pseudo_id) AS gerou_lead_qualificado,
+        MAX(flag_premium) OVER(PARTITION BY user_pseudo_id) AS possui_plano_premium
+    FROM
+        jornada_base
+)
+```
+***Ao rodar a estrutura acima, o resultado na primeira linha revelou um utilizador com user_pseudo_id nulo (null), mas que avançou no funil até gerar um lead. Esta é a prova visual dos "Eventos Órfãos" (Consent Mode negado / AdBlockers) que identificámos na auditoria de qualidade (QA) do Dia 53.***
+
+* ![Estrutura da Query e Resultados Iniciais](dia54_query_ctes_atribuicao.png) 
+  
+------------------------------------------------------------------------------------------------------
+
+**Passo C: Consolidação Final (1 linha por Utilizador):**
+Como as Window Functions repetem os resultados para cada evento do utilizador, usamos o DISTINCT na consulta principal para colapsar todo o histórico numa tabela limpa, agrupando cada jornada numa única linha.
+
+```sql
+-- Relatório Final Consolidado: Exibindo 1 linha por Utilizador Único
+SELECT DISTINCT
+    user_pseudo_id,
+    TIMESTAMP_MICROS(primeiro_acesso_micros) AS data_primeiro_acesso,
+    primeira_pagina,
+    pais_origem,
+    fez_scroll,
+    viu_rodape_50pct,
+    gerou_lead_qualificado,
+    possui_plano_premium
+FROM
+    atribuicao_usuario
+ORDER BY
+    data_primeiro_acesso ASC;
+```
+***Utilizamos o filtro _TABLE_SUFFIX na CTE base, a query escaneou apenas 55,37 KB de dados na Sandbox, mantendo o custo estritamente em zero. O relatório final com DISTINCT achatou o histórico de milhares de eventos nas exatas 10 linhas correspondentes aos nossos 10 utilizadores únicos.***
+![Trava FinOps e Tabela Completa](dia54_resultado_finops_jornada.png) 
+
+------------------------------------------------------------------------------------------------------
