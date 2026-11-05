@@ -1503,3 +1503,157 @@ ORDER BY
 ![Trava FinOps e Tabela Completa](dia54_resultado_finops_jornada.png) 
 
 ------------------------------------------------------------------------------------------------------
+
+### Dia 55: Modelagem de LTV, Matriz RFM e Lead Scoring
+
+**Objetivo:**
+Transformar os eventos brutos desaninhados e a jornada cronológica do Dia 54 em métricas financeiras (LTV) e comportamentais (Matriz RFM) sólidas, criando uma pontuação (*Lead Scoring*) pronto para direcionar a tomada de decisão das equipes de Marketing.
+
+**A Teoria: LTV e Matriz RFM**
+A Matriz RFM (Recency, Frequency, Monetary) é o padrão ouro na segmentação de clientes. No ecossistema de Martech, traduzimos este conceito de negócio para a engenharia de dados da seguinte forma:
+*   **Recência (Recency):** Mede o tempo decorrido (em dias) desde a última interação do utilizador. Quanto mais recente, mais "quente" ele está.
+*   **Frequência (Frequency):** Avalia o engajamento contínuo através da contagem de sessões únicas e volume total de eventos gerados.
+*   **Valor Monetário (Monetary / LTV):** Calcula o *Lifetime Value*, ou seja, o somatório financeiro total que aquele utilizador já gerou para a empresa em toda a sua vida útil.
+
+Em negócios B2B ou de produtos de alto valor agregado, o volume diário de conversões finais (compras) é baixo. Se avaliarmos o sucesso do tráfego apenas pela métrica financeira de LTV, a maioria da base terá valor zero, deixando a equipe de Marketing "cega".
+Para resolver este problema, aplicamos o **Lead Scoring**. Criamos uma métrica sintética atribuindo pontuações matemáticas baseadas no nível de esforço do utilizador dentro do nosso funil. Através de uma estrutura de `CASE WHEN` em SQL, construímos a seguinte balança de pesos:
+
+| Evento do GA4 | Pontuação | Nível de Engajamento e Significado |
+| :--- | :---: | :--- |
+| `page_view` | **1** | Interação passiva, esforço mínimo. |
+| `scroll` | **2** | Demonstrou interesse inicial no conteúdo da página. |
+| `view_footer` | **5** | Leu a página até ao fim, demonstrando alto engajamento na leitura. |
+| `generate_lead` | **20** | Conversão de meio de funil, confiou os seus dados de contacto. |
+| `purchase` (Plano Premium) | **50** | Conversão final, alto valor monetário direto. |
+
+Somando estes pontos, criamos o **Martech Engagement Score**, que permite segmentar utilizadores entre VIP, Quentes (MQL), Mornos e Frios.
+
+
+**Desenvolvimento Código SQL:**
+
+A nossa arquitetura de consulta foi dividida em três CTEs para separar a extração, as *Window Functions* e as agregações finais.
+
+**Extração de Parâmetros e Atribuição de Pesos:**
+Neste primeiro bloco, preparamos as fundações: convertemos o *timestamp* em data, extraímos os parâmetros (URL, Sessão e Valor Financeiro) utilizando *Scalar Subqueries* com `UNNEST` e aplicamos as regras da nossa tabela de Lead Scoring.
+
+```sql
+WITH extracao_base AS (
+    SELECT
+        user_pseudo_id,
+        event_timestamp,
+        event_name,
+        -- Convertendo o timestamp para formato de Data (essencial para calcular a Recência)
+        DATE(TIMESTAMP_MICROS(event_timestamp)) AS event_date,
+
+        -- Extração de Parâmetros (URL e Sessão) sem duplicar linhas
+        (SELECT value.string_value FROM UNNEST(event_params) WHERE key = 'page_location') AS pagina_atual,
+        (SELECT value.int_value FROM UNNEST(event_params) WHERE key = 'ga_session_id') AS session_id,
+        
+        -- Extração Financeira Tratada (COALESCE garante a captura de inteiros ou decimais)
+        COALESCE(
+            (SELECT value.double_value FROM UNNEST(event_params) WHERE key = 'value'),
+            CAST((SELECT value.int_value FROM UNNEST(event_params) WHERE key = 'value') AS FLOAT64),
+            0.0
+        ) AS event_value,
+        
+        geo.country AS pais,
+
+        -- Balança de Pesos: Motor de Lead Scoring
+        CASE
+            WHEN event_name = 'purchase' THEN 50
+            WHEN event_name = 'generate_lead' THEN 20
+            WHEN event_name = 'view_footer' THEN 5
+            WHEN event_name = 'scroll' THEN 2
+            WHEN event_name = 'page_view' THEN 1
+            ELSE 0
+        END AS pontos_evento
+    FROM
+        `portifolio-martech.analytics_538183128.events_*`
+    WHERE
+        -- Trava FinOps para processamento < 1 MB
+        _TABLE_SUFFIX BETWEEN '20260901' AND FORMAT_DATE('%Y%m%d', CURRENT_DATE())
+),
+```
+**Preservando a Atribuição First-Touch:**
+Antes de agruparmos os dados, utilizamos as Window Functions (FIRST_VALUE) para congelar e guardar a origem original (primeira página e país) de cada utilizador.
+
+```sql
+jornada_first_touch AS (
+    SELECT
+        *,
+        -- Capturando a origem da jornada (First-Touch) antes da agregação
+        FIRST_VALUE(pagina_atual) OVER(PARTITION BY user_pseudo_id ORDER BY event_timestamp ASC) AS primeira_pagina,
+        FIRST_VALUE(pais) OVER(PARTITION BY user_pseudo_id ORDER BY event_timestamp ASC) AS pais_origem
+    FROM
+        extracao_base
+),
+```
+
+**Agregação da Matriz RFM (Compressão da Base):**
+Aqui, utilizamos o GROUP BY para esmagar todo o histórico de navegação numa única linha por utilizador, aplicando as funções matemáticas para calcular a Recência (diferença de dias), a Frequência (contagem de sessões) e o Valor (somatório de dinheiro e pontos).
+
+```sql
+consolidado_rfm AS (
+    SELECT
+        user_pseudo_id,
+        ANY_VALUE(primeira_pagina) AS primeira_pagina,
+        ANY_VALUE(pais_origem) AS pais_origem,
+
+        -- [R] Recência: Diferença de dias entre a data de referência e o último acesso
+        DATE_DIFF(CURRENT_DATE(), MAX(event_date), DAY) AS recencia_dias,
+
+        -- [F] Frequência: Contagem de sessões únicas e volume total de interações
+        COUNT(DISTINCT session_id) AS frequencia_sessoes,
+        COUNT(event_name) AS total_eventos,
+
+        -- [M] Monetary / LTV: Soma total do valor financeiro gerado
+        SUM(event_value) AS ltv_monetario,
+
+        -- Engagement Score: Somatório de todos os pontos de Lead Scoring acumulados
+        SUM(pontos_evento) AS martech_engagement_score
+    FROM
+        jornada_first_touch
+    GROUP BY
+        user_pseudo_id
+)
+```
+**Relatório Final de Segmentação:**
+O código final exibe as colunas consolidadas e aplica uma última regra de classificação, rotulando os utilizadores para facilitar o trabalho tático da equipa de Tráfego Pago (Retargeting).
+
+```sql
+-- Relatório Final: Utilizadores classificados e prontos para o Marketing
+SELECT
+    user_pseudo_id,
+    primeira_pagina,
+    pais_origem,
+    recencia_dias,
+    frequencia_sessoes,
+    total_eventos,
+    ltv_monetario,
+    martech_engagement_score,
+    -- Motor de Segmentação Final
+    CASE
+        WHEN martech_engagement_score >= 50 THEN '4 - Cliente VIP'
+        WHEN martech_engagement_score >= 20 THEN '3 - Quente (MQL)'
+        WHEN martech_engagement_score BETWEEN 5 AND 19 THEN '2 - Morno'
+        ELSE '1 - Frio'
+    END AS segmentacao_lead
+FROM
+    consolidado_rfm
+ORDER BY
+    martech_engagement_score DESC, 
+    ltv_monetario DESC;
+```
+
+📸 **Evidência Prática do Dia 55 (Matriz RFM e Lead Scoring)**
+![Resultado Matriz RFM e Lead Scoring](dia55_resultado_rfm_lead_scoring.png)
+
+## Análise Detalhada dos Resultados
+
+Conforme previsto na teoria, o ltv_monetario (compras diretas) de todos os utilizadores da amostra foi de 0.0. Sem o modelo de Engagement Score, o Marketing trataria todos os 10 utilizadores como irrelevantes. Graças à pontuação, conseguimos identificar três utilizadores com scores altíssimos (231, 88 e 65), revelando propensão de compra.
+
+O utilizador classificado no topo do ranking como Cliente VIP, com estrondosos 231 pontos e 77 eventos, não possui user_pseudo_id (null). Isto é a comprovação prática de que utilizadores que navegam protegidos por AdBlockers ou que negam o Consent Mode (criando eventos "órfãos") podem ser os clientes mais valiosos e aquecidos da base.
+
+A query distribuiu perfeitamente a base nos quartis corretos (VIPs, MQLs Quentes, Mornos e Frios). Com este relatório em mãos, uma ferramenta de automação pode enviar campanhas de e-mail agressivas para os utilizadores VIP/Quentes e cadências educativas suaves para os Mornos/Frios.
+
+Ao traduzir comportamentos isolados em métricas de valor real (Lead Scoring) e extrair inteligência até mesmo dos desafios de rastreamento (*Consent Mode*), transformamos dados brutos num verdadeiro produto de dados. O resultado é uma segmentação acionável para o negócio, gerando alto impacto para a equipe de Marketing enquanto mantém a eficiência de custos (FinOps) sob total controle.
