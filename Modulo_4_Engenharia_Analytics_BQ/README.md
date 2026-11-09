@@ -1657,3 +1657,133 @@ O utilizador classificado no topo do ranking como Cliente VIP, com estrondosos 2
 A query distribuiu perfeitamente a base nos quartis corretos (VIPs, MQLs Quentes, Mornos e Frios). Com este relatório em mãos, uma ferramenta de automação pode enviar campanhas de e-mail agressivas para os utilizadores VIP/Quentes e cadências educativas suaves para os Mornos/Frios.
 
 Ao traduzir comportamentos isolados em métricas de valor real (Lead Scoring) e extrair inteligência até mesmo dos desafios de rastreamento (*Consent Mode*), transformamos dados brutos num verdadeiro produto de dados. O resultado é uma segmentação acionável para o negócio, gerando alto impacto para a equipe de Marketing enquanto mantém a eficiência de custos (FinOps) sob total controle.
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+### Dia 56: Camada Semântica — Views Lógicas e Feature Tables para Data Science
+
+**Objetivo:**
+Empacotar toda a inteligência de negócios (LTV, Matriz RFM e Lead Scoring) desenvolvida dos Dias 52 a 55 numa **View Semântica** oficial (`vw_martech_customer_360`). O objetivo é criar uma fonte única, deixando o dado limpo, modelado e pronto para ser consumido por ferramentas de BI e Cientistas de Dados.
+Para desenhar uma Camada Semântica profissional, fundamentámos a nossa arquitetura em dois pilares técnicos:
+Em vez de duplicar dados gravando uma nova tabela física, criámos uma View Lógica. A View atua como um "envelope" que guarda a nossa query. Quando consultada, executa o código em tempo real. Isto garante custo zero de armazenamento em disco (FinOps) e encapsula toda a complexidade técnica (como o `UNNEST` e as *Window Functions*). As ferramentas de BI apenas veem colunas limpas. Já o Cientista de Dados precisa de uma Feature Table para treinar modelos de Machine Learning como: predição de LTV ou Churn. 
+A nossa View foi desenhada exatamente para isso: colapsamos toda a jornada de navegação na granularidade estrita de **uma linha por entidade (`user_pseudo_id`)**, convertendo comportamentos em variáveis numéricas e prevenindo o vazamento de dados.
+
+**Desenvolvimento Código SQL:**
+Abaixo, detalhamos a construção da View no BigQuery, dividida por blocos lógicos para facilitar a manutenção e a rastreabilidade do raciocínio.
+
+Iniciamos o código ordenando ao BigQuery que crie (ou substitua) a View na camada `gold`. A primeira CTE desaninha os parâmetros JSON do GA4 e aplica a nossa balança de pontos de *Lead Scoring*, extraindo o valor financeiro de forma segura com o `COALESCE`.
+
+```sql
+CREATE OR REPLACE VIEW `portifolio-martech.gold.vw_martech_customer_360` AS
+
+WITH extracao_base AS (
+    SELECT
+        user_pseudo_id,
+        event_timestamp,
+        event_name,
+        DATE(TIMESTAMP_MICROS(event_timestamp)) AS event_date,
+
+        -- Extração de Parâmetros
+        (SELECT value.string_value FROM UNNEST(event_params) WHERE key = 'page_location') AS pagina_atual,
+        (SELECT value.int_value FROM UNNEST(event_params) WHERE key = 'ga_session_id') AS session_id,
+        
+        -- Extração Financeira Tratada
+        COALESCE(
+            (SELECT value.double_value FROM UNNEST(event_params) WHERE key = 'value'),
+            CAST((SELECT value.int_value FROM UNNEST(event_params) WHERE key = 'value') AS FLOAT64),
+            0.0
+        ) AS event_value,
+        
+        geo.country AS pais,
+
+        -- Motor de Lead Scoring
+        CASE
+            WHEN event_name = 'purchase' THEN 50
+            WHEN event_name = 'generate_lead' THEN 20
+            WHEN event_name = 'view_footer' THEN 5
+            WHEN event_name = 'scroll' THEN 2
+            WHEN event_name = 'page_view' THEN 1
+            ELSE 0
+        END AS pontos_evento
+    FROM
+        `portifolio-martech.analytics_538183128.events_*`
+    WHERE
+        _TABLE_SUFFIX BETWEEN '20260901' AND FORMAT_DATE('%Y%m%d', CURRENT_DATE())
+),
+```
+
+A segunda CTE utiliza Window Functions (FIRST_VALUE). A importância deste bloco é congelar a página de origem e o país do primeiro toque do utilizador, garantindo que não perdemos o histórico cronológico de aquisição antes de agregarmos os dados.
+
+```sql
+jornada_first_touch AS (
+    SELECT
+        *,
+        -- Fixando a origem cronológica antes do agrupamento
+        FIRST_VALUE(pagina_atual) OVER(PARTITION BY user_pseudo_id ORDER BY event_timestamp ASC) AS primeira_pagina,
+        FIRST_VALUE(pais) OVER(PARTITION BY user_pseudo_id ORDER BY event_timestamp ASC) AS pais_origem
+    FROM
+        extracao_base
+),
+```
+Aqui, comprimimos a base utilizando o GROUP BY por user_pseudo_id. O resultado transforma os milhões de cliques em indicadores de performance isolados: Recência (Dias inativos), Frequência (Sessões) e Monetário (LTV).
+
+```sql
+
+consolidado_rfm AS (
+    SELECT
+        user_pseudo_id,
+        ANY_VALUE(primeira_pagina) AS primeira_pagina,
+        ANY_VALUE(pais_origem) AS pais_origem,
+
+        -- [R] Recência
+        DATE_DIFF(CURRENT_DATE(), MAX(event_date), DAY) AS recencia_dias,
+
+        -- [F] Frequência
+        COUNT(DISTINCT session_id) AS frequencia_sessoes,
+        COUNT(event_name) AS total_eventos,
+
+        -- [M] Monetary / LTV
+        SUM(event_value) AS ltv_monetario,
+
+        -- Engagement Score Total
+        SUM(pontos_evento) AS martech_engagement_score
+    FROM
+        jornada_first_touch
+    GROUP BY
+        user_pseudo_id
+),
+```
+
+Por fim, exibimos a base limpa e aplicamos a classificação final para as equipes de Marketing identificarem automaticamente quem são os Leads Qualificados (MQLs).
+
+```sql
+SELECT
+    user_pseudo_id,
+    primeira_pagina,
+    pais_origem,
+    recencia_dias,
+    frequencia_sessoes,
+    total_eventos,
+    ltv_monetario,
+    martech_engagement_score,
+    -- Label de Classificação para MQLs
+    CASE
+        WHEN martech_engagement_score >= 50 THEN '4 - Cliente VIP'
+        WHEN martech_engagement_score >= 20 THEN '3 - Quente (MQL)'
+        WHEN martech_engagement_score BETWEEN 5 AND 19 THEN '2 - Morno'
+        ELSE '1 - Frio'
+    END AS segmentacao_lead
+FROM
+    consolidado_rfm;
+```
+*Esquema estrutural da View na camada Gold:*
+![Schema da View Customer 360](dia56_view_schema.png)
+
+Para comprovar a eficácia da arquitetura, materializámos a View no BigQuery e validámos o seu consumo com um simples comando:
+```sql
+SELECT * FROM portifolio-martech.gold.vw_martech_customer_360;
+```
+*Consumo simplificado da Feature Table revelando a segmentação final:*
+![Resultados da View Customer 360](dia56_view_select_results.png)
+
+Com a construção da `vw_martech_customer_360`, concluímos o ciclo de modelagem de Engenharia de Analytics no BigQuery. O projeto evoluiu da simples extração de eventos JSON granulares para a entrega de Qualificação de *Leads* centralizado na camada Gold. Agora, as equipes de Marketing e Data Science possuem acesso direto e de baixo custo (FinOps) a uma *Feature Table* rica.
