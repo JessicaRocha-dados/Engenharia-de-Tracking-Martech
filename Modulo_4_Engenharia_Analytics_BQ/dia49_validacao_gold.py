@@ -59,7 +59,7 @@ try:
             """,
             lambda n: n <= 10  # Tolerância para o histórico (10 falhas de GTM/Rede)
         ),
-        
+
 
         'qa_orfaos_sessao': (
             """
@@ -110,7 +110,7 @@ try:
         registrar_execucao(client, 'validacao', 'sucesso',
                            total_linhas_validadas, inicio_etapa, run_id)
         print("✅ Todos os testes de qualidade (Schema + Dados) passaram com sucesso!")
-
+        
 except Exception as erro:
     # REGISTO DE FALHA (Seja falha de schema ou de dados)
     registrar_execucao(client, 'validacao', 'falha', 0, inicio_etapa, run_id)
