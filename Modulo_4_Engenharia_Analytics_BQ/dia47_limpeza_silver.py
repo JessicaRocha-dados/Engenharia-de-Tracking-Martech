@@ -29,14 +29,21 @@ try:
         FROM `portifolio-martech.bronze.eventos_ga4`
         WHERE _ingestion_date = '{data_alvo}'
     """
-    df_silver = client.query(query).to_dataframe()
+    
+    # 🛡️ Adicionando a Trava FinOps para a extração Silver
+    config_extracao = bigquery.QueryJobConfig(
+        maximum_bytes_billed=50 * 1024 * 1024  # Trava FinOps: 50 MB
+    )
+
+    # Executa a query com a blindagem e transforma em DataFrame
+    df_silver = client.query(query, job_config=config_extracao).to_dataframe()
 
     print("Aplicando limpeza e regras de qualidade (Camada Silver)...")
     # Converte a data do evento para o formato correto datetime
     df_silver['event_date'] = pd.to_datetime(
         df_silver['event_date'], format='%Y%m%d')
 
-    #  A linha que preenchia user_pseudo_id com 'ID_AUSENTE' foi removida!
+    # A linha que preenchia user_pseudo_id com 'ID_AUSENTE' foi removida!
     # Deixamos o ID como nulo para a camada Gold contar os eventos anônimos corretamente.
 
     # Tratamento de nulos em outras colunas e padronização

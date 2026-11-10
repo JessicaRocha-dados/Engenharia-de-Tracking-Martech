@@ -8,7 +8,7 @@ from utils_observabilidade import registrar_execucao
 
 print("Conectando ao BigQuery via Workload Identity...")
 # Inicializa o cliente de forma limpa, herdando automaticamente o token seguro do GitHub Actions
-client = client = bigquery.Client(project='portifolio-martech')
+client = bigquery.Client(project='portifolio-martech')
 
 # Inicia o cronômetro e cria um ID único para esta execução
 run_id = str(uuid.uuid4())
@@ -24,11 +24,14 @@ try:
         WHERE _TABLE_SUFFIX BETWEEN @inicio AND @fim
     """
 
-    # Configuração das datas para filtrar apenas o mês desejado
-    config_extracao = bigquery.QueryJobConfig(query_parameters=[
-        bigquery.ScalarQueryParameter('inicio', 'STRING', '20260901'),
-        bigquery.ScalarQueryParameter('fim', 'STRING', '20260930'),
-    ])
+    # Configuração das datas e Blindagem FinOps (maximum_bytes_billed)
+    config_extracao = bigquery.QueryJobConfig(
+        query_parameters=[
+            bigquery.ScalarQueryParameter('inicio', 'STRING', '20260901'),
+            bigquery.ScalarQueryParameter('fim', 'STRING', '20260930'),
+        ],
+        maximum_bytes_billed=50 * 1024 * 1024  # Trava FinOps: 50 MB
+    )
 
     print("Extraindo dados do GA4...")
     # Executa a query e transforma em DataFrame
