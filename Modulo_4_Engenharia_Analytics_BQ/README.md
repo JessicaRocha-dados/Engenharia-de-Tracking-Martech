@@ -1787,3 +1787,63 @@ SELECT * FROM portifolio-martech.gold.vw_martech_customer_360;
 ![Resultados da View Customer 360](dia56_view_select_results.png)
 
 Com a construção da `vw_martech_customer_360`, concluímos o ciclo de modelagem de Engenharia de Analytics no BigQuery. O projeto evoluiu da simples extração de eventos JSON granulares para a entrega de Qualificação de *Leads* centralizado na camada Gold. Agora, as equipes de Marketing e Data Science possuem acesso direto e de baixo custo (FinOps) a uma *Feature Table* rica.
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## Dia 57: Analytics Engineering, GitOps e FinOps Programático
+
+### Objetivo:
+Profissionalizar a arquitetura do projeto implementando práticas de **Analytics Engineering, GitOps e FinOps**. O foco foi automatizar a orquestração da nossa View Semântica (`vw_martech_customer_360`) via Python e GitHub Actions, além de blindar todo o *pipeline* de dados contra custos acidentais de processamento no BigQuery.
+
+Em ambientes corporativos de alta maturidade, a criação e gestão de tabelas ou Views não deve depender de ações manuais (cliques na interface do banco de dados). 
+Para alcançar esse padrão, baseamos a arquitetura do Dia 57 em dois pilares:
+1. **GitOps:** O repositório no GitHub atua como a única fonte da verdade. Separámos as responsabilidades: o código SQL da Camada Semântica fica isolado num ficheiro `.sql` limpo, enquanto o nosso orquestrador Python se encarrega de ler esse ficheiro e materializar a View no BigQuery.
+2. **FinOps Programático:** O modelo de cobrança do BigQuery é baseado no volume de dados processados. Um erro em uma *query* automatizada pode gerar custos massivos em segundos. Para prevenir isso, configuramos um limite rígido de processamento no Python, transformando um potencial desastre financeiro num simples erro de execução interceptado pelo código.
+
+### Camadas Bronze e Silver Blindagem FinOps (Dias 46 e 47):
+Para garantir a governança total do *pipeline*, injetámos regras de segurança e boas práticas diretamente nos scripts de orquestração, dividindo a refatoração em duas frentes:
+Nestes dois scripts de extração e limpeza, o nosso foco foi exclusivamente proteger o orçamento da infraestrutura. Adicionámos o parâmetro `maximum_bytes_billed` nas configurações do job do BigQuery (`QueryJobConfig`). Funciona como um *circuit breaker*, se o volume de dados brutos explodir e a query estimar um processamento superior a 50 MB, o BigQuery aborta a execução instantaneamente. O custo gerado é zero e o erro é imediatamente registado na nossa tabela de observabilidade.
+
+```python
+# Adicionado aos scripts dia46_ingestao_bronze.py e dia47_limpeza_silver.py
+config_extracao = bigquery.QueryJobConfig(
+    # (parâmetros anteriores mantidos...)
+    maximum_bytes_billed=50 * 1024 * 1024  # Trava FinOps: 50 MB limitando o custo
+)
+```
+### Camada Gold GitOps + FinOps (Dia 50):
+No script da camada Gold, a refatoração foi mais profunda para atingirmos o padrão exigido na orquestração da View Semântica.
+Removemos a query SQL que estava estática dentro do código Python. Utilizámos o módulo os para localizar e ler dinamicamente o ficheiro gold_vw_martech_customer_360.sql. Agora, o GitHub atua de fato como a única fonte da verdade. Foi aplicado a mesma trava de segurança de 50 MB no momento de enviar a instrução para o BigQuery, garantindo que a execução do DDL (CREATE OR REPLACE VIEW) não gere cobranças indevidas.
+
+```python
+# 1. Prática de GitOps: Lendo o script SQL externamente do repositório
+diretorio_atual = os.path.dirname(os.path.abspath(__file__))
+caminho_sql = os.path.join(diretorio_atual, 'sql', 'gold_vw_martech_customer_360.sql')
+
+with open(caminho_sql, 'r') as file:
+    sql = file.read()
+
+# 2. Prática de FinOps: Blindagem ativada na submissão da View
+config_carga = bigquery.QueryJobConfig(
+    maximum_bytes_billed=50 * 1024 * 1024  # Trava FinOps: 50 MB
+)
+```
+O resultado foi a execução de um fluxo de dados resiliente, seguro e de baixo custo. O *pipeline* completo foi submetido à nuvem e executado com sucesso ("All Greens") via **GitHub Actions** (autenticado por *Workload Identity OIDC*). Toda a operação, incluindo a modelagem da nossa matriz de cliente 360, foi registada com precisão de milissegundos na nossa tabela central de auditoria (`pipeline_execucoes`).
+
+**1. Blindagem FinOps Programática e GitOps (Python lendo SQL):**
+> Demonstração da trava limitando o processamento a 50MB.
+![Trava FinOps Programática](dia57_codigo_finops.png)
+
+**2. Orquestração na Nuvem (CI/CD):**
+> Pipeline de dados orquestrado diariamente e concluído com sucesso via GitHub Actions.
+![Pipeline CI/CD Sucesso](dia57_github_actions_sucesso.png)
+
+**3. Auditoria e Observabilidade:**
+> Registo de sucesso consolidado da etapa `gold_customer_360` na tabela de monitorização do BigQuery.
+![Log da Camada Gold](dia57_log_pipeline.png)
+
+------------------------------------------------------------------------------------------------------------------------
+
+Com a entrega do Dia 57, fechamos com sucesso o núcleo de **Engenharia e Arquitetura de Dados**, o que começou como dados brutos e desestruturados de navegação do GA4 (Camada Bronze), foi higienizado com rigor (Camada Silver) e está agora perfeitamente modelado numa Visão Cliente 360 (Camada Gold), toda a operação roda agora de forma **autónoma, auditável e protegida financeiramente** na nuvem. Temos agora uma fundação perfeita, pronta para alimentar dashboards avançados e modelos preditivos de Machine Learning. 
+
+
