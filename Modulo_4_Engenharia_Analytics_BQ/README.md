@@ -1846,4 +1846,41 @@ O resultado foi a execução de um fluxo de dados resiliente, seguro e de baixo 
 
 Com a entrega do Dia 57, fechamos com sucesso o núcleo de **Engenharia e Arquitetura de Dados**, o que começou como dados brutos e desestruturados de navegação do GA4 (Camada Bronze), foi higienizado com rigor (Camada Silver) e está agora perfeitamente modelado numa Visão Cliente 360 (Camada Gold), toda a operação roda agora de forma **autónoma, auditável e protegida financeiramente** na nuvem. Temos agora uma fundação perfeita, pronta para alimentar dashboards avançados e modelos preditivos de Machine Learning. 
 
+---
 
+#  Auditoria (Dia 58 - Fase 1 de 2)
+
+## Objetivo 
+
+O objetivo desta auditoria não é apenas testar códigos, mas sim contar a "história de um dado". Queremos provar que podemos confiar de olhos fechados nos números que chegam aos nossos relatórios. 
+
+Para isso, vamos acompanhar passo a passo a jornada de um único evento real (a geração de um *lead*), desde o momento exato em que o utilizador clica no site até esse dado chegar com segurança ao nosso servidor. 
+
+Como o nosso rastreamento acontece em tempo real, mas o BigQuery só processa o grande volume de dados no dia seguinte , dividimos essa missão em dois dias. Hoje (Dia 58), o foco é garantir que o dado "nasceu" perfeito: ter a certeza de que a ação do utilizador foi capturada corretamente, respeitando a privacidade e com a geolocalização exata, antes mesmo de ir para o banco de dados final.
+
+##Parte 1: Do Browser ao Server-Side (Tempo Real)
+
+Nesta etapa inicial, garantimos que o dado nasce limpo, estruturado e com a geolocalização corrigida antes de ser empacotado para o BigQuery.
+
+### 1. Disparo do Evento no Frontend
+O utilizador interage com o formulário de cadastro, acionando um `dataLayer.push` que carrega os parâmetros de negócio essenciais (`lead_status`, `plano_cliente`, etc.).
+
+![Disparo do DataLayer no Frontend](./dia58_01_datalayer_frontend.png)
+
+### 2. Acionamento do GTM Web
+O contentor Web processa o evento personalizado `lead_gerado` e dispara a tag oficial do Google Analytics (GA4), preparando o payload para envio.
+
+![Disparo do GTM Web](./dia58_02_disparo_gtm_web.png)
+
+### 3. Recepção no Server-Side (Stape)
+O evento chega com segurança ao nosso servidor de tracking dedicado no Stape, garantindo conformidade de privacidade e mascaramento de cookies de terceiros.
+
+![Recepção no Server-Side](./dia58_03_recepcao_server_side.png)
+
+### 4. Correção de Geolocalização (IP Override)
+Para evitar que o tráfego assuma a localização do datacenter do servidor de nuvem, injetamos dinamicamente o parâmetro `ip_override` utilizando o cabeçalho real do utilizador (`X-Forwarded-For`). O painel de depuração comprova que a injeção está ativa e que o Google Analytics recebeu a requisição com sucesso (`POST - 204`) no tráfego de hoje. Isso garante que, quando o processamento *batch* ocorrer amanhã, o país seja registrado corretamente como Brasil.
+
+![Payload IP Override](./dia58_04_payload_ip_override_204.png)
+
+
+>  **Próximo Passo (Dia 59):** Amanhã, após a exportação do lote diário pelo GA4, executaremos o pipeline Medallion (Bronze,Silver,Gold) no BigQuery para rastrear a chegada e a consolidação deste exato evento gerado hoje.
