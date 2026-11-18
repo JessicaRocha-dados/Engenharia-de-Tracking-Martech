@@ -16,6 +16,10 @@ inicio_etapa = time.time()
 print(f"Iniciando a etapa Bronze. Run ID: {run_id}")
 
 try:
+    # Define a data atual dinamicamente para garantir a ingestão até o lote mais recente
+    hoje = datetime.now()
+    data_fim = hoje.strftime('%Y%m%d')
+
     # Query de extração dos dados brutos do GA4
     query = """
         SELECT event_date, event_timestamp, event_name,
@@ -28,23 +32,22 @@ try:
     config_extracao = bigquery.QueryJobConfig(
         query_parameters=[
             bigquery.ScalarQueryParameter('inicio', 'STRING', '20260901'),
-            bigquery.ScalarQueryParameter('fim', 'STRING', '20260930'),
+            bigquery.ScalarQueryParameter('fim', 'STRING', data_fim),
         ],
         maximum_bytes_billed=50 * 1024 * 1024  # Trava FinOps: 50 MB
     )
 
-    print("Extraindo dados do GA4...")
+    print(f"Extraindo dados do GA4 (20260901 até {data_fim})...")
     # Executa a query e transforma em DataFrame
     bq_df = client.query(query, job_config=config_extracao).to_dataframe()
 
     print("Adicionando metadados da Camada Bronze...")
-    hoje = datetime.now()
     bq_df['_ingestion_timestamp'] = pd.to_datetime(hoje)
     bq_df['_source_file'] = 'API_GA4_BigQuery'
     bq_df['_ingestion_date'] = hoje.date()
 
     print("Carregando tabela no BigQuery (Idempotência via Decorador de Partição)...")
-    particao_hoje = hoje.strftime('%Y%m%d')
+    particao_hoje = data_fim
     tabela_destino = f'portifolio-martech.bronze.eventos_ga4${particao_hoje}'
 
     config_carga = bigquery.LoadJobConfig(
