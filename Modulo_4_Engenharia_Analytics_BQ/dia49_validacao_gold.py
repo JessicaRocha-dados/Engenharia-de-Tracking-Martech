@@ -58,7 +58,7 @@ try:
                 ) > 1
             )
             """,
-            lambda n: n <= 3  # Janela móvel de 48h com tolerância de até 3 reenvios de rede/GTM
+            lambda n: n <= 10  # Janela móvel de 48h com tolerância de até 10 reenvios de rede/GTM
         ),
 
         'qa_orfaos_sessao': (
