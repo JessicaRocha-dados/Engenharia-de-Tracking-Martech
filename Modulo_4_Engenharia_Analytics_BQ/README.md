@@ -1846,7 +1846,6 @@ O resultado foi a execução de um fluxo de dados resiliente, seguro e de baixo 
 
 Com a entrega do Dia 57, fechamos com sucesso o núcleo de **Engenharia e Arquitetura de Dados**, o que começou como dados brutos e desestruturados de navegação do GA4 (Camada Bronze), foi higienizado com rigor (Camada Silver) e está agora perfeitamente modelado numa Visão Cliente 360 (Camada Gold), toda a operação roda agora de forma **autónoma, auditável e protegida financeiramente** na nuvem. Temos agora uma fundação perfeita, pronta para alimentar dashboards avançados e modelos preditivos de Machine Learning. 
 
----
 
 #  Auditoria (Dia 58 - Fase 1 de 2)
 
@@ -1882,5 +1881,137 @@ Para evitar que o tráfego assuma a localização do datacenter do servidor de n
 
 ![Payload IP Override](./dia58_04_payload_ip_override_204.png)
 
+------------------------------------------------------------------------------------------------------------------------
+# Dia 59-  Do BigQuery ao Consumo no Looker Studio
 
->  **Próximo Passo (Dia 59):** Amanhã, após a exportação do lote diário pelo GA4, executaremos o pipeline Medallion (Bronze,Silver,Gold) no BigQuery para rastrear a chegada e a consolidação deste exato evento gerado hoje.
+## Contexto e Diferença de Data em Relação ao Dia 58
+A auditoria do **Dia 58** havia sido planejada para continuar no dia seguinte com o processamento do BigQuery, mas como não foi possível concluir no prazo previsto, os testes precisaram ser refeitos em outra data. Por isso, **as imagens do Dia 58 (`dia58_01` a `dia58_04`) correspondem a outra captura/data anterior** e não pertencem ao mesmo lote rastreado neste fechamento.
+
+Para garantir rastreabilidade exata sem misturar datas ou sessões diferentes, esta entrega do **Dia 59** documenta a jornada completa de um único disparo real do lote de **25/11/2026** (concluído em **26/11/2026**):
+1. **A Jornada de 1 Dado:** do disparo Web/Server-Side até a Bronze (`events_20261125`), Silver (`silver.eventos_ga4`), *Circuit Breaker* (`dia49_validacao_gold.py`), Gold (`vw_martech_customer_360`) e Looker Studio.
+2. **Governança e Resiliência:** o bloqueio real do *Circuit Breaker* por acúmulo de disparos na regra `qa_duplicidade_disparo`, sua refatoração para janela móvel de 48 horas e a reexecução aprovada.
+3. **Atualização do BI:** o impacto no painel **JR DATA — TRÁFEGO & MARTECH** ao estender o período até **26 de nov. de 2026**.
+
+---
+
+## Rastreabilidade do Lote de 25/11/2026
+
+| Ponto | Camada / Ferramenta | Chave / Identificador | Evidência / Valor Observado | Imagem de Referência |
+| :--- | :--- | :--- | :--- | :--- |
+| **Ponto 1** | GTM Web  | `event` (`dataLayer.push`) | `lead_gerado` $\rightarrow$ `GA4 - Evento - lead_gerado` | `dia59_ponto01_gtm_web_lead_gerado.png` |
+| **Ponto 2** | GTM Server  | `event_name` / `tid` | `generate_lead`  | `dia59_ponto02_gtm_server_generate_lead.png` |
+| **Ponto 3** | Roteamento SGTM | Tag `GA4 - Servidor` | `6` disparos processados no fluxo Server-Side | `dia59_ponto02_gtm_server_generate_lead.png` |
+| **Ponto 4** | Exportação BigQuery (`analytics_538183128`) | Tabela diária `20261125` | `18` registros de `generate_lead` disponíveis na tabela | `dia59_ponto05_bronze_raw_2.png` |
+| **Ponto 5** | BigQuery Bronze (`events_20261125`) | `user_pseudo_id` / `data_hora_utc` | `OlUBdnE5YsaC6zFuy0/ytiTUyojOz7FymrYm56XvNtM=.1795636206` em `2026-11-25 19:55:41.106770 UTC` | `dia59_ponto05_bronze_raw_2.png` |
+| **Ponto 6** | BigQuery Silver (`silver.eventos_ga4`) | `event_name` / `country` | `GENERATE_LEAD` / `BRAZIL` (`UNNEST` aplicado) | `dia59_ponto06_silver_unnest.png` |
+| **Ponto 7** | GitHub Actions (`dia49_validacao_gold.py`) | `qa_duplicidade_disparo` | Bloqueio em `valor=13` Janela de 48h (`valor=7 <= 10`) aprovado | `dia59_ponto07_gold_circuit_breaker.png` |
+| **Ponto 8** | Gold (`vw_martech_customer_360`) + Looker Studio | `martech_engagement_score` / KPIs | Score `377` (`4 - Cliente VIP`) \| `14` Usuários \| `7.342` Interações | `dia59_ponto08_gold_customer_360.png` + `dia59_ponto08_looker_studio.png` |
+
+## Passo Técnico e Evidências
+
+### Coleta Client-Side no GTM Web 
+No ambiente de testes (`jessicarocha-dados.github.io/projeto-tracking/`), foram realizados envios reais de formulário com diferentes e-mails de teste. Cada envio empurrou o evento customizado `lead_gerado` para a camada de dados (`dataLayer.push`), disparando a tag **`GA4 - Evento - lead_gerado`** no contêiner Web.
+
+![Ponto 1 — Disparo do evento lead_gerado no GTM Web](./dia59_ponto01_gtm_web_lead_gerado.png)
+
+### Recepção e Roteamento no GTM Server-Side 
+As requisições `collect?v=2` chegaram ao contêiner Server-Side, onde o evento foi normalizado para a nomenclatura padrão do GA4 (`generate_lead`) e roteado pela tag **`GA4 - Servidor`** para o fluxo de dados.
+
+![Ponto 2 — Recepção e disparo generate_lead no GTM Server-Side](./dia59_ponto02_gtm_server_generate_lead.png)
+
+### Ingestão Bruta na Camada Bronze 
+Com o fechamento da tabela diária nativa do GA4 no BigQuery (`portifolio-martech.analytics_538183128.events_20261125`), validamos a aterrissagem dos `18` registros de `generate_lead` com sua estrutura hierárquica original (`event_params` aninhado):
+* **`event_date`:** `20261125`
+* **`data_hora_utc`:** `2026-11-25 19:55:41.106770 UTC`
+* **`user_pseudo_id`:** `OlUBdnE5YsaC6zFuy0/ytiTUyojOz7FymrYm56XvNtM=.1795636206`
+* **`geo.country` / `geo.city`:** `Brazil` / `Sao Paulo`
+* **`ga_session_id`:** `1795636205`
+
+```sql
+SELECT
+  event_date,
+  TIMESTAMP_MICROS(event_timestamp) AS data_hora_utc,
+  event_name,
+  user_pseudo_id,
+  geo.country,
+  geo.city,
+  event_params
+FROM `portifolio-martech.analytics_538183128.events_20261125`
+WHERE event_name = 'generate_lead'
+ORDER BY event_timestamp DESC;
+```
+
+![Ponto 5 — Camada Bronze Raw no BigQuery](./dia59_ponto05_bronze_raw.png)
+
+
+### Desaninhamento e Padronização na Camada Silver 
+Após a execução do job de transformação Silver (`dia47_silver.py`), os arrays `event_params` foram achatados via `UNNEST` e os campos textuais padronizados em caixa alta (`GENERATE_LEAD`, `BRAZIL`), mantendo exatamente a mesma chave de usuário e timestamp da camada Bronze.
+
+```sql
+SELECT
+  event_date,
+  TIMESTAMP_MICROS(event_timestamp) AS data_hora_utc,
+  event_name,
+  user_pseudo_id,
+  country
+FROM `portifolio-martech.silver.eventos_ga4`
+WHERE UPPER(event_name) = 'GENERATE_LEAD'
+  AND DATE(TIMESTAMP_MICROS(event_timestamp)) = '2026-11-25'
+ORDER BY event_timestamp DESC;
+```
+
+![Ponto 6 — Camada Silver desaninhada no BigQuery](./dia59_ponto06_silver_unnest.png)
+
+### Governança Ativa: Bloqueio e Refatoração do Circuit Breaker (`dia49_validacao_gold.py`)
+Durante a orquestração automatizada no **GitHub Actions** (`pipeline_completa`), o *Circuit Breaker* (`Modulo_4_Engenharia_Analytics_BQ/dia49_validacao_gold.py`) interrompeu a entrega antes da liberação final com exit code `1`:
+
+1. **O Incidente Detectado:**
+   * A regra **`qa_duplicidade_disparo`** acusou `valor=13`, rompendo o limite configurado de `n <= 10`.
+   * Todos os demais checks estruturais e de integridade passaram (`schema validado`, `tabela vazia = 12`, `chaves nulas = 0`, `frescor = 1 dia`, `duplicidade na Gold = 0`, `qa_orfaos_sessao = 0` e `qa_integridade_lead = 15`).
+2. **Causa Raiz:**
+   * A query original aplicava `FARM_FINGERPRINT` agrupando eventos por segundo inteiro (`DIV(event_timestamp, 1000000)`) sobre **todo o histórico acumulado** desde `20260901`. A bateria controlada de envios de teste na mesma sessão somou 3 ocorrências ao acumulado histórico de 10, atingindo `13`.
+3. **Correção Aplicada em Produção:**
+   * Refatoramos a regra `qa_duplicidade_disparo` para avaliar uma **janela móvel de 48 horas** (`_TABLE_SUFFIX BETWEEN FORMAT_DATE('%Y%m%d', DATE_SUB(CURRENT_DATE(), INTERVAL 2 DAY)) AND FORMAT_DATE('%Y%m%d', CURRENT_DATE())`), isolando o comportamento recente de ruídos históricos antigos, e ajustamos a tolerância operacional para `n <= 10` (absorvendo os `7` disparos de QA das últimas 48h).
+4. **Validação Final:**
+   * Após o `git push` da correção, o workflow reexecutou com sucesso, atualizando `gold.fato_eventos_marketing` e `gold.vw_martech_customer_360` e aprovando todos os testes do *Circuit Breaker*.
+
+![Ponto 7 — Circuit Breaker aprovado no GitHub Actions](./dia59_ponto07_gold_circuit_breaker.png)
+
+### Consolidação na Camada Semântica Gold (`vw_martech_customer_360`)
+Na View analítica `portifolio-martech.gold.vw_martech_customer_360`, o usuário rastreado (`OlUBdnE5YsaC6zFuy0/ytiTUyojOz7FymrYm56XvNtM=.1795636206`) teve seu histórico consolidado automaticamente:
+* **`total_eventos`:** `52`
+* **`frequencia_sessoes`:** `1`
+* **`recencia_dias`:** `1`
+* **`martech_engagement_score`:** `377`
+* **`segmentacao_lead`:** `4 - Cliente VIP`
+
+> **Nota Técnica de Arquitetura Server-Side:** Na View `vw_martech_customer_360`, a coluna `pais_origem` registra `United States` porque o hit inaugural da sessão (`session_start` / `page_view` com parâmetro `gtm_debug`) foi processado pelo contêiner Server-Side hospedado em região Cloud nos EUA antes do repasse do IP de origem do cliente brasileiro.
+
+```sql
+SELECT *
+FROM `portifolio-martech.gold.vw_martech_customer_360`
+WHERE user_pseudo_id LIKE 'OlUBdnE5YsaC6zFuy0/ytiTUyojOz7FymrYm56XvNtM=.1795636206';
+```
+
+![Ponto 8 — Consolidação do cliente na View Gold Customer 360](./dia59_ponto08_gold_customer_360.png)
+
+### Consumo Executivo e Comparativo 
+Na camada final de visualização (**JR DATA — TRÁFEGO & MARTECH**), aplicamos identidade visual corporativa (paleta `#0F4C5C` / `#1B7A8C`, cartões de KPI com tipografia hierárquica e precisão inteira para contagens) e validamos a atualização dos indicadores após expandir o filtro temporal até **26 de nov. de 2026**:
+
+| Indicador / Dimensão | Antes (Baseline) | Depois (Pós-Pipeline) | Variação |
+| :--- | :---: | :---: | :---: |
+| **Usuários Únicos** | `12` | `14` | `+2` (`+16,7%`) |
+| **Interações Totais** | `7.253` | `7.342` | `+89` (`+1,2%`) |
+| **Interações por Usuário** | `604,42` | `524,43` | `-79,99` |
+| **Países Monitorados** | `3` | `3` | Estável |
+| **Brasil (Usuários / Interações)** | `2` / `2.066` | `3` / `2.115` | `+1` usuário / `+49` interações |
+| **Estados Unidos (Usuários / Interações)** | `10` / `4.835` | `11` / `4.875` | `+1` usuário / `+40` interações |
+
+#### Antes da Carga 
+![Baseline do Dashboard no Looker Studio antes da nova carga](./dia59_ponto08_looker_studio_baseline.png)
+
+#### Depois da Carga Validada (Período até 26/11/2026)
+![Dashboard atualizado no Looker Studio após validação ponta a ponta](./dia59_ponto08_looker_studio.png)
+
+## Conclusão 
+A validação do Dia 59 mostra que a arquitetura Engenharia-de-Tracking-Martech sustenta o fluxo completo com rastreabilidade e governança na prática: os eventos coletados via GTM Web e Server-Side chegam ao BigQuery, são tratados e validados automaticamente pelo Circuit Breaker no GitHub Actions e abastecem tanto a camada de Lead Scoring (vw_martech_customer_360) quanto os indicadores no Looker Studio. O incidente com a regra de duplicidade reforçou o valor de ter travas automáticas antes da publicação — e de refinar a lógica continuamente para que o pipeline proteja a qualidade dos dados sem travar operações legítimas.
