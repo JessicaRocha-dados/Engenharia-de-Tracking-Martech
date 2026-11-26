@@ -50,16 +50,16 @@ try:
             SELECT COUNT(*) AS n FROM (
                 SELECT 1 
                 FROM `portifolio-martech.analytics_538183128.events_*`
-                WHERE _TABLE_SUFFIX BETWEEN '20260901' AND FORMAT_DATE('%Y%m%d', CURRENT_DATE())
+                WHERE _TABLE_SUFFIX BETWEEN FORMAT_DATE('%Y%m%d', DATE_SUB(CURRENT_DATE(), INTERVAL 2 DAY))
+                                        AND FORMAT_DATE('%Y%m%d', CURRENT_DATE())
                 QUALIFY ROW_NUMBER() OVER (
                     PARTITION BY FARM_FINGERPRINT(CONCAT(IFNULL(user_pseudo_id, 'ANONIMO'), '_', CAST(DIV(event_timestamp, 1000000) AS STRING), '_', event_name))
                     ORDER BY event_timestamp ASC
                 ) > 1
             )
             """,
-            lambda n: n <= 10  # Tolerância para o histórico (10 falhas de GTM/Rede)
+            lambda n: n <= 3  # Janela móvel de 48h com tolerância de até 3 reenvios de rede/GTM
         ),
-
 
         'qa_orfaos_sessao': (
             """
@@ -110,7 +110,7 @@ try:
         registrar_execucao(client, 'validacao', 'sucesso',
                            total_linhas_validadas, inicio_etapa, run_id)
         print("✅ Todos os testes de qualidade (Schema + Dados) passaram com sucesso!")
-        
+
 except Exception as erro:
     # REGISTO DE FALHA (Seja falha de schema ou de dados)
     registrar_execucao(client, 'validacao', 'falha', 0, inicio_etapa, run_id)
